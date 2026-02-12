@@ -1,0 +1,38 @@
+Tokens de superfície
+
+bg-surface
+bg-surfaceLight
+bg-overlay
+bg-overlayHover
+
+Tokens de borda
+
+border-borderSubtle
+
+Tokens de texto
+text-textmain
+text-textsoft
+text-textmuted
+
+Regra: Nenhum white/, black/, slate/, gray/ entra fora de casos excepcionais documentados.
+
+Dívida visual conhecida (a corrigir quando as telas forem revisadas):
+
+- Uso de bg-white/* em:
+  DetalheDemanda.jsx
+  PainelPublico.jsx
+  RegistrarProblema.jsx
+
+- Uso de border-white/* em:
+  ComoFunciona.jsx
+  DetalheDemanda.jsx
+  Home.jsx
+  PainelPublico.jsx
+  RegistrarProblema.jsx
+
+- Uso de text-white/* em:
+  DetalheDemanda.jsx
+  PainelPublico.jsx
+  RegistrarProblema.jsx
+
+- Uso de 

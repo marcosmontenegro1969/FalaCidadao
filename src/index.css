@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* SISTEMA DE CORES (THEME)
+ *
+ * UI fixa (não muda por cidade). */
+:root {
+  /* Brand (UI fixa) */
+  --color-primary: #10b981;
+  --color-secondary: #2563eb;
+  --color-accent: #fbbf24;
+
+  /* Superfícies */
+  --color-surface: #0f172a;
+  --color-surface-light: #1e293b;
+
+  /* Textos */
+  --color-text: #ffffff;
+  --color-text-soft: #CBD5E1;
+  --color-text-muted: #94A3B8;
+
+  /* === CAMADA RGB (para alpha confiável no Tailwind) ===
+   * Formato: "R G B" (sem vírgulas) */
+  --color-primary-rgb: 16 185 129;      /* #10b981 */
+  --color-secondary-rgb: 37 99 235;     /* #2563eb */
+  --color-accent-rgb: 251 191 36;       /* #fbbf24 */
+
+  --color-surface-rgb: 15 23 42;        /* #0f172a */
+  --color-surface-light-rgb: 30 41 59;  /* #1e293b */
+
+  --color-text-rgb: 255 255 255;        /* #ffffff */
+  --color-text-soft-rgb: 203 213 225;   /* #CBD5E1 */
+  --color-text-muted-rgb: 148 163 184;  /* #94A3B8 */
+
+  /* === TOKENS SEMÂNTICOS (intenções) === */
+  --overlay-hero: rgba(var(--color-surface-rgb) / 0.82);
+  --overlay-footer: rgba(0 0 0 / 0.10);
+
+  --border-subtle: rgba(255 255 255 / 0.10);
+  --surface-overlay: rgba(255 255 255 / 0.05);
+  --surface-overlay-hover: rgba(255 255 255 / 0.10);
+
+  --glow-primary-0: rgba(var(--color-primary-rgb) / 0.00);
+  --glow-primary-60: rgba(var(--color-primary-rgb) / 0.60);
+}
+
+/* HERO */
+.bg-hero {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.hero-wrapper {
+  position: relative;
+  isolation: isolate;
+}
+
+.hero-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--overlay-hero);
+  z-index: -1;
+}
+
+.hero-wrapper-inner {
+  position: relative;
+  z-index: 1;
+}
