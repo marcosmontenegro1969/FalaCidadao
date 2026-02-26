@@ -61,10 +61,11 @@ export default function PainelPublico() {
 
   const demandasFiltradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
+    const cidadeDaDemanda = (d) => d.cidadeRelato || d.cidade;
 
     return demandasBase.filter((d) => {
       // Filtro de cidade depende do modo de visualização
-      if (view === "cidade" && d.cidade !== city) return false;
+      if (view === "cidade" && cidadeDaDemanda(d) !== city) return false;
 
       // No modo “todas”, ocultar demandas resolvidas
       if (view === "todas" && d.status === "Resolvido") return false;
@@ -233,7 +234,8 @@ export default function PainelPublico() {
                     </span>
 
                     <span className="text-xs text-textmuted">
-                      {d.bairro} · {CITY_THEMES[d.cidade]?.cidadeShort ?? d.cidade}
+                      {d.bairro} ·{" "}
+                      {CITY_THEMES[d.cidadeRelato || d.cidade]?.cidadeShort ?? (d.cidadeRelato || d.cidade)}
                     </span>
                   </div>
 

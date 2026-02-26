@@ -1,417 +1,47 @@
 // src/pages/RegistrarProblema.jsx
 
-import { useContext, useMemo, useState, useEffect, useRef } from "react";
+// Libs externas
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+// Context/tema
 import { ThemeContext } from "../context/ThemeContext";
 import { CITY_THEMES } from "../theme/cities";
+
+//Storage
 import { addDemanda, getDemandas, setDemandas } from "../storage/demandasStorage";
+
+// Constants
 import { CATEGORIAS_DEMANDAS } from "../constants/categoriasDemandas";
+
+// Components
+import AlertOverlay from "../components/AlertOverlay";
+import BackButton from "../components/BackButton";
+import EvidenceGrid from "../components/EvidenceGrid";
+import ModalFotos from "../components/ModalFotos";
+import ProcessingOverlay from "../components/ProcessingOverlay";
 import PulseButton from "../components/PulseButton";
 import SecondaryActionButton from "../components/SecondaryActionButton";
-import EvidenceGrid from "../components/EvidenceGrid";
-import BackButton from "../components/BackButton";
 
-/**
- * ---------------------------------------------------------------------------
- * RegistrarProblema — Fluxo (visão macro)
- * ---------------------------------------------------------------------------
- * Objetivo: permitir que o cidadão registre um problema com evidências, MAS
- * primeiro tente evitar duplicidade de demandas (triagem).
- *
- * FASE 1 — Dados mínimos do problema (Categoria, Bairro, Rua, Ponto de referência)
- *   1) Usuário preenche dados e clica "Verificar se já existe" (triagem).
- *   2) O sistema procura demandas parecidas (mesma cidade, pesos de categoria/bairro/rua).
- *
- * FASE 1.5 — Resultado da triagem
- *   - Se encontrar possíveis correspondências: usuário escolhe uma ação:
- *       a) "reforcar"  -> confirma que é o mesmo (sem fotos novas)
- *       b) "anexar"    -> adiciona novas fotos à demanda existente
- *       c) "novo"      -> registra como novo problema
- *   - Se NÃO encontrar correspondências: o sistema avança automaticamente para "novo".
- *
- * FASE 2 — Execução da ação (render condicional por acaoEscolhida)
- *   - "reforcar": descrição curta + aceite -> incrementa impacto.confirmacoes
- *   - "anexar"  : descrição + 2..5 fotos + aceite -> adiciona fotos à demanda alvo
- *   - "novo"    : descrição + 2..5 fotos + aceite -> cria demanda nova
- *
- * UX (micro):
- *   - scrollTo(refSeção, refFoco) para levar o usuário ao ponto do erro/ação.
- *   - toast leve (success/error/info) para feedback sem bloquear.
- *   - overlay de processamento durante compressão/conversão das imagens.
- */
-
-// =============================================================================
-// 1) Helpers de "duplicidade" / triagem (MVP)
-// =============================================================================
-
-/**
- * normalizeText:
- * - padroniza string para comparação (lowercase, remove acentos, limpa pontuação)
- * - usado em bairro/rua e tokenização
- */
-function normalizeText(s = "") {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/**
- * tokenize:
- * - divide a descrição em palavras úteis (remove stopwords e termos curtos)
- * - objetivo: evitar que “rua”, “av”, “número”, etc. dominem a comparação
- */
-function tokenize(s = "") {
-  const stop = new Set([
-    "a","o","os","as","um","uma","de","do","da","dos","das","em","no","na","nos","nas",
-    "para","por","e","ou","com","sem","ao","aos","à","às","que","ha","há",
-    "dias","dia","rua","avenida","av","prox","proximo","próximo","numero","número",
-  ]);
-
-  return normalizeText(s)
-    .split(" ")
-    .filter((w) => w.length >= 3 && !stop.has(w));
-}
-
-/**
- * Similaridade simples (Jaccard) entre dois conjuntos de tokens.
- * Retorna 0..1
- */
-function jaccard(aTokens = [], bTokens = []) {
-  const A = new Set(aTokens);
-  const B = new Set(bTokens);
-  if (A.size === 0 && B.size === 0) return 0;
-
-  let inter = 0;
-  for (const x of A) if (B.has(x)) inter++;
-
-  const uni = A.size + B.size - inter;
-  return uni === 0 ? 0 : inter / uni;
-}
-
-/**
- * computeDupScore:
- * - gera um "score" de possível duplicidade entre o input do usuário e uma demanda existente.
- * - regra mínima: mesma cidade
- * - pesos (MVP):
- *     categoria = 0.45 (alto)
- *     bairro    = 0.20 (médio)
- *     rua       = 0.15 (médio, por contains)
- *     descricao = 0.20 (leve, por similaridade Jaccard)
- *
- * Retorna score 0..1
- */
-function computeDupScore({ cidade, categoria, bairro, rua, descricao }, demanda) {
-  // regra mínima: mesma cidade
-  if (!cidade || demanda.cidade !== cidade) return 0;
-
-  let score = 0;
-
-  // categoria (alto peso)
-  if (categoria && demanda.categoria === categoria) score += 0.45;
-
-  // bairro (médio)
-  if (bairro && normalizeText(demanda.bairro) === normalizeText(bairro)) score += 0.2;
-
-  // rua (médio) — MVP: texto livre (contains)
-  if (rua && demanda.rua && normalizeText(demanda.rua).includes(normalizeText(rua))) {
-    score += 0.15;
-  }
-
-  // descrição (leve)
-  const sim = jaccard(tokenize(descricao), tokenize(demanda.descricao));
-  score += Math.min(0.2, sim * 0.2);
-
-  return score; // 0..1
-}
-
-/**
- * Limite de armazenamento:
- * - como o MVP guarda Base64 no LocalStorage, precisamos de teto.
- * - 3.5MB é "teto seguro" para evitar estourar quota em navegadores comuns.
- */
-const MAX_FOTOS_TOTAL_BYTES = 3.5 * 1024 * 1024;
-
-// =============================================================================
-// 2) Fotos: compressão + conversão para Base64 (MVP sem backend)
-// =============================================================================
-
-/**
- * readAsDataURL:
- * - lê um File e retorna DataURL (base64) original
- */
-function readAsDataURL(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Falha ao ler arquivo."));
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(file);
-  });
-}
-
-/**
- * loadImage:
- * - carrega DataURL em um objeto Image para desenhar em Canvas
- */
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    // evita ceneita de canvas tainted em cenários futuros (URLs remotas)
-    img.crossOrigin = "anonymous";
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Falha ao carregar imagem."));
-    img.src = src;
-  });
-}
-
-/**
- * fileToCompressedDataURL:
- * - pipeline de compressão:
- *   File -> DataURL -> Image -> Canvas resize -> DataURL comprimido
- * - reduz drasticamente peso e resolução para caber no LocalStorage
- */
-async function fileToCompressedDataURL(
-  file,
-  { maxW = 1280, maxH = 1280, quality = 0.72, mime = "image/jpeg" } = {}
-) {
-  const originalDataUrl = await readAsDataURL(file);
-  const img = await loadImage(originalDataUrl);
-
-  let { width, height } = img;
-  const ratio = Math.min(maxW / width, maxH / height, 1); // nunca aumenta
-  const targetW = Math.max(1, Math.round(width * ratio));
-  const targetH = Math.max(1, Math.round(height * ratio));
-
-  const canvas = document.createElement("canvas");
-  canvas.width = targetW;
-  canvas.height = targetH;
-
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas não suportado neste navegador.");
-
-  // JPEG não suporta transparência; fundo branco evita “preto” em PNGs transparentes
-  if (mime === "image/jpeg") {
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, targetW, targetH);
-  }
-
-  ctx.drawImage(img, 0, 0, targetW, targetH);
-  return canvas.toDataURL(mime, quality);
-}
-
-/**
- * estimateBase64Bytes:
- * - calcula bytes aproximados do conteúdo base64 (sem header "data:image/...;base64,")
- * - usado para impor limite total (MAX_FOTOS_TOTAL_BYTES)
- */
-function estimateBase64Bytes(dataUrl = "") {
-  const i = dataUrl.indexOf("base64,");
-  if (i === -1) return 0;
-
-  const b64 = dataUrl.slice(i + 7);
-
-  // bytes ≈ (len * 3/4) - padding
-  let padding = 0;
-  if (b64.endsWith("==")) padding = 2;
-  else if (b64.endsWith("=")) padding = 1;
-
-  return Math.max(0, Math.floor((b64.length * 3) / 4) - padding);
-}
-
-/**
- * formatBytes:
- * - apenas utilitário para mensagens amigáveis ao usuário
- */
-function formatBytes(bytes) {
-  if (!bytes || bytes < 1024) return `${bytes} B`;
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(1)} KB`;
-  const mb = kb / 1024;
-  return `${mb.toFixed(2)} MB`;
-}
-
-/**
- * filesToBase64:
- * - processa em série para reduzir travamentos de UI.
- * - emite progress (done/total/fileName) para overlay
- * - se 1 arquivo falhar, ele é ignorado (MVP tolerante)
- */
-async function filesToBase64(files, opts) {
-  const out = [];
-  const onProgress = opts?.onProgress;
-
-  for (let i = 0; i < files.length; i++) {
-    const f = files[i];
-
-    try {
-      const dataUrl = await fileToCompressedDataURL(f, opts);
-      out.push(dataUrl);
-    } catch (err) {
-      console.warn("Falha ao converter imagem:", f?.name, err);
-      // MVP: ignora a foto com problema, mantém o fluxo vivo
-    } finally {
-      if (typeof onProgress === "function") {
-        onProgress({
-          done: i + 1,
-          total: files.length,
-          fileName: f?.name ?? "",
-        });
-      }
-    }
-  }
-
-  return out;
-}
-
-// =============================================================================
-// 3) Componentes locais: Modal de fotos existentes + Overlay de processamento
-// =============================================================================
-
-/**
- * ModalFotos:
- * - usado para visualizar fotos já existentes de uma demanda sugerida na triagem
- * - abre ao clicar na miniatura no painel de sugestões
- */
-function ModalFotos({ open, fotos, index, onClose, onPrev, onNext, title }) {
-  if (!open) return null;
-
-  const hasFotos = Array.isArray(fotos) && fotos.length > 0;
-  const src = hasFotos ? fotos[index] : null;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Visualização de foto"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-4xl rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur p-3 md:p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="text-xs text-white/80">
-            {title ? <span className="text-white/90">{title} · </span> : null}
-            Evidência {hasFotos ? index + 1 : 0} de {hasFotos ? fotos.length : 0}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-3 py-1.5 rounded-lg border border-white/10 text-xs text-white/90 hover:bg-white/10 transition"
-          >
-            Fechar
-          </button>
-        </div>
-
-        <div className="rounded-xl overflow-hidden border border-white/10 bg-black/30 flex items-center justify-center min-h-[240px]">
-          {src ? (
-            <img
-              src={src}
-              alt={`Evidência ${index + 1}`}
-              className="w-full h-full object-contain"
-              loading="eager"
-            />
-          ) : (
-            <div className="text-sm text-white/70 p-6">
-              Nenhuma evidência fotográfica disponível.
-            </div>
-          )}
-        </div>
-
-        {hasFotos && fotos.length > 1 && (
-          <div className="flex items-center justify-between gap-2 mt-3">
-            <button
-              type="button"
-              onClick={onPrev}
-              className="px-3 py-2 rounded-lg border border-white/10 text-xs text-white/90 hover:bg-white/10 transition"
-            >
-              Anterior
-            </button>
-            <button
-              type="button"
-              onClick={onNext}
-              className="px-3 py-2 rounded-lg border border-white/10 text-xs text-white/90 hover:bg-white/10 transition"
-            >
-              Próxima
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/**
- * ProcessingOverlay:
- * - aparece durante compressão/conversão das imagens
- * - dá transparência ao usuário de que o app não travou
- */
-function ProcessingOverlay({ open, progress }) {
-  if (!open) return null;
-
-  const { done, total, fileName } = progress || {};
-  const pct = total ? Math.round((done / total) * 100) : 0;
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur p-5 space-y-3">
-        <div className="text-sm text-white/90 font-medium">
-          Processando fotos...
-        </div>
-
-        <div className="text-xs text-white/70">
-          {total ? `Convertendo ${done}/${total}` : "Preparando..."}
-          {fileName ? (
-            <span className="block mt-1 truncate">Arquivo: {fileName}</span>
-          ) : null}
-        </div>
-
-        <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-          <div
-            className="h-full bg-white/40 transition-all"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-
-        <div className="text-[11px] text-white/60">
-          Isso pode levar alguns segundos dependendo do tamanho das imagens.
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
-// 4) Componente principal: estado, triagem, validações e submissões
-// =============================================================================
+// Utils
+import { MAX_FOTOS_TOTAL_BYTES, estimateBase64Bytes, filesToBase64, formatBytes } from "../utils/photosPipeline";
+import { distanciaMetros, fileKey, lerGpsExif } from "../utils/exifGps";
+import { reverseGeocodeCity } from "../utils/reverseGeocode";
+import { computeDupScore } from "../utils/triagem";
 
 export default function RegistrarProblema() {
   const navigate = useNavigate();
 
-  // cidade ativa vem do contexto global (ThemeContext)
   const { city } = useContext(ThemeContext);
   const cityTheme = CITY_THEMES[city] ?? CITY_THEMES.default;
 
-  // ---------------------------------------------------------------------------
-  // 4.1) Refs de UX: scroll e foco em validações
-  // ---------------------------------------------------------------------------
-  // - descricaoRef/evidenciasRef/avisoRef apontam para "seções"
-  // - descricaoInputRef/fotosPickRef apontam para elementos focáveis
   const descricaoRef = useRef(null);
   const descricaoInputRef = useRef(null);
   const evidenciasRef = useRef(null);
   const avisoRef = useRef(null);
   const fotosPickRef = useRef(null);
+  const LIMITE_DISTANCIA_FOTOS_METROS = 30;
 
-  /**
-   * scrollTo:
-   * - usado nas validações para levar o usuário diretamente ao ponto do erro
-   * - se focusRef existir, foca o input/textarea após um pequeno delay
-   */
   function scrollTo(sectionRef, focusRef) {
     const el = sectionRef?.current;
     if (!el) return;
@@ -424,83 +54,62 @@ export default function RegistrarProblema() {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // 4.2) Estados do formulário
-  // ---------------------------------------------------------------------------
-
-  // FASE 1: dados mínimos do problema
   const [categoria, setCategoria] = useState("Iluminação");
   const [bairro, setBairro] = useState("");
   const [rua, setRua] = useState("");
   const [pontoReferencia, setPontoReferencia] = useState("");
 
-  // FASE 2: descrição varia conforme ação escolhida
-  // - novo: descrição completa
-  // - anexar: "por que as novas fotos ajudam"
-  // - reforcar: frase curta
   const [descricaoNovo, setDescricaoNovo] = useState("");
   const [descricaoAnexo, setDescricaoAnexo] = useState("");
   const [descricaoReforco, setDescricaoReforco] = useState("");
 
-  // evidências (somente em novo/anexar)
-  const [fotosSelecionadas, setFotosSelecionadas] = useState([]); // File[]
+  const [fotosSelecionadas, setFotosSelecionadas] = useState([]); 
+  const [fotosMeta, setFotosMeta] = useState([]); 
+  const [localRelato, setLocalRelato] = useState(null); 
   const [aceiteResponsabilidade, setAceiteResponsabilidade] = useState(false);
+  const [fotosPreviewUrls, setFotosPreviewUrls] = useState([]); 
 
-  // feedback de UI
   const [isProcessing, setIsProcessing] = useState(false);
-  const [toast, setToast] = useState(null); // { type, message }
+  const [toast, setToast] = useState(null); 
   const [progress, setProgress] = useState({ done: 0, total: 0, fileName: "" });
+  const [alertOverlay, setAlertOverlay] = useState(null); 
 
-  // triagem: quando true, calculamos sugestões (useMemo) e exibimos painel
   const [triagemAtiva, setTriagemAtiva] = useState(false);
 
-  // ação escolhida pós-triagem:
-  // null (nenhuma) | "novo" | "anexar" | "reforcar"
   const [acaoEscolhida, setAcaoEscolhida] = useState(null);
   const [demandaAlvoId, setDemandaAlvoId] = useState(null);
 
-  // sempre que o usuário troca de ação, exigimos novo aceite (evita “auto-aceite”)
   useEffect(() => {
     setAceiteResponsabilidade(false);
   }, [acaoEscolhida]);
 
-  // ---------------------------------------------------------------------------
-  // 4.3) Modal para ver fotos de demandas sugeridas
-  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const urls = fotosSelecionadas.map((file) => URL.createObjectURL(file));
+    setFotosPreviewUrls(urls);
+
+    return () => {
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [fotosSelecionadas]);  
+
   const [modalOpen, setModalOpen] = useState(false);
   const [modalFotos, setModalFotos] = useState([]);
   const [modalIdx, setModalIdx] = useState(0);
   const [modalTitle, setModalTitle] = useState("");
 
-  // ---------------------------------------------------------------------------
-  // 4.4) Base de demandas (LocalStorage) + assinatura de atualização
-  // ---------------------------------------------------------------------------
   const [demandasBase, setDemandasBase] = useState([]);
 
-  /**
-   * triagemHabilitada:
-   * - só permitimos triagem quando os 3 campos essenciais estiverem preenchidos
-   */
   const triagemHabilitada =
     categoria.trim().length > 0 &&
     bairro.trim().length > 0 &&
     rua.trim().length > 0;
 
-  /**
-   * Sempre que o usuário altera dados do problema, invalidamos triagem/ação.
-   * Motivo: evita manter sugestões/ação escolhida com dados antigos.
-   * Observação: mantemos descrição/fotos no MVP para não frustrar quem só “corrigiu” rua/bairro.
-   */
   useEffect(() => {
     setTriagemAtiva(false);
     setAcaoEscolhida(null);
     setDemandaAlvoId(null);
   }, [categoria, bairro, rua, pontoReferencia]);
 
-  /**
-   * Carrega demandas do LocalStorage e escuta um evento custom
-   * (emitido pelo storage quando houver mudanças em outras telas).
-   */
   useEffect(() => {
     const load = () => setDemandasBase(getDemandas());
     load();
@@ -509,27 +118,6 @@ export default function RegistrarProblema() {
     return () => window.removeEventListener("falaCidadao:demandas_updated", load);
   }, []);
 
-  /**
-   * descricaoParaTriagem:
-   * - reservado para futuras melhorias (Cap. 4), caso você queira incluir descrição no score
-   * - no momento, o input de triagem usa descricao: "" (apenas dados mínimos)
-   */
-  const descricaoParaTriagem =
-    acaoEscolhida === "reforcar"
-      ? descricaoReforco
-      : acaoEscolhida === "anexar"
-      ? descricaoAnexo
-      : descricaoNovo;
-
-  // ---------------------------------------------------------------------------
-  // 4.5) Sugestões da triagem (useMemo) + auto-avanço para "novo" quando não há match
-  // ---------------------------------------------------------------------------
-
-  /**
-   * sugestoes:
-   * - calculado apenas quando triagemAtiva=true
-   * - filtro: score >= 0.55 e no máximo 3 itens
-   */
   const sugestoes = useMemo(() => {
     if (!triagemAtiva) return [];
 
@@ -538,7 +126,7 @@ export default function RegistrarProblema() {
       categoria,
       bairro,
       rua,
-      descricao: "", // MVP: comparação de descrição ainda não usada no input
+      descricao: "", 
     };
 
     return demandasBase
@@ -548,11 +136,6 @@ export default function RegistrarProblema() {
       .slice(0, 3);
   }, [triagemAtiva, city, categoria, bairro, rua, demandasBase]);
 
-  /**
-   * Auto-avanço:
-   * - se a triagem rodou e não achou nada, seguimos direto como “novo”
-   * - isso evita deixar o usuário “sem próximo passo”
-   */
   useEffect(() => {
     if (triagemAtiva && sugestoes.length === 0 && !acaoEscolhida) {
       setAcaoEscolhida("novo");
@@ -564,10 +147,6 @@ export default function RegistrarProblema() {
     if (!triagemHabilitada) return;
     setTriagemAtiva(true);
   }
-
-  // ---------------------------------------------------------------------------
-  // 4.6) Modal de fotos (demanda sugerida)
-  // ---------------------------------------------------------------------------
 
   function openFotosExistentes(demanda, idx = 0) {
     const fotos = Array.isArray(demanda.fotos) ? demanda.fotos : [];
@@ -591,92 +170,144 @@ export default function RegistrarProblema() {
     setModalIdx((i) => (i + 1) % modalFotos.length);
   }
 
-  // ---------------------------------------------------------------------------
-  // 4.7) Evidências: seleção/remoção (novo/anexar)
-  // ---------------------------------------------------------------------------
-
-  /**
-   * onPickFotos:
-   * - junta fotos atuais + novas e limita a 5
-   * - zera input file para permitir selecionar o mesmo arquivo novamente
-   */
-  function onPickFotos(e) {
+  async function onPickFotos(e) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    const merged = [...fotosSelecionadas, ...files].slice(0, 5);
-    setFotosSelecionadas(merged);
+    // Sempre zerar o input para permitir re-selecionar o mesmo arquivo
     e.target.value = "";
+
+    // Junta com as já selecionadas e corta em 5
+    const merged = [...fotosSelecionadas, ...files].slice(0, 5);
+
+    if (merged.length < 2 || merged.length > 5) {
+      showToast("error", "Envie entre 2 e 5 fotos para continuar.");
+      scrollTo(evidenciasRef, fotosPickRef);
+      return;
+    }
+
+    try {
+
+      const metas = [];
+      for (let i = 0; i < merged.length; i++) {
+        const f = merged[i];
+        const gps = await lerGpsExif(f);
+
+        if (!gps.ok) {
+          setAlertOverlay({
+            title: `Foto ${i + 1} sem GPS (EXIF)`,
+            message:
+              `Arquivo: ${f.name}\n\n` +
+              `Essa foto está sem dados de localização. ` +
+              `Tire a foto com a câmera do celular com a localização ativada e anexe o arquivo original. ` +
+              `Evite WhatsApp/Instagram, pois geralmente removem os dados.`,
+          });
+
+          scrollTo(evidenciasRef, fotosPickRef);
+          return; // BLOQUEIA: não atualiza estado
+        }
+        
+        metas.push({
+          key: fileKey(f),
+          name: f.name,
+          size: f.size,
+          lastModified: f.lastModified,
+          lat: gps.lat,
+          lng: gps.lng,
+          takenAt: gps.takenAt,
+        });
+      }
+
+      const ref = metas[0]; 
+
+      for (let i = 0; i < metas.length; i++) {
+        const m = metas[i];
+        const dist = distanciaMetros(ref.lat, ref.lng, m.lat, m.lng);
+
+        if (dist > LIMITE_DISTANCIA_FOTOS_METROS) {
+          setAlertOverlay({
+            title: "Fotos com locais diferentes",
+            message:
+              `A foto ${i + 1} (${m.name}) está longe demais da primeira foto.\n\n` +
+              `Distância estimada: ${Math.round(dist)}m.\n` +
+              `Limite permitido: ${LIMITE_DISTANCIA_FOTOS_METROS}m.\n\n` +
+              `Para garantir veracidade, envie fotos do mesmo local.`,
+          });
+
+          scrollTo(evidenciasRef, fotosPickRef);
+          return; 
+        }
+      }
+
+      setFotosSelecionadas(merged);
+      setFotosMeta(metas);
+
+      setLocalRelato({
+        lat: metas[0].lat,
+        lng: metas[0].lng,
+        source: "exif",
+      });
+
+    } catch (err) {
+      console.error(err);
+      showToast(
+        "error",
+        "Não foi possível ler o EXIF das fotos. Tente novamente com imagens originais da câmera."
+      );
+      scrollTo(evidenciasRef, fotosPickRef);
+    }
   }
 
   function removeFotoAt(idx) {
     setFotosSelecionadas((arr) => arr.filter((_, i) => i !== idx));
   }
 
-  // ---------------------------------------------------------------------------
-  // 4.8) Validações — sempre apontam o usuário para a seção correta via scrollTo()
-  // ---------------------------------------------------------------------------
+  function validarAntesDeEnviar(tipo) {
+    // tipo: "novo" | "anexar" | "reforcar"
 
-  function validarDescricaoObrigatoria() {
-    // "novo" exige descrição
-    if (!descricaoNovo.trim()) {
-      showToast("error", "Descreva o problema para continuar.");
-      scrollTo(descricaoRef, descricaoInputRef);
-      return false;
+    if (tipo === "novo") {
+      if (!descricaoNovo.trim()) {
+        showToast("error", "Descreva o problema para continuar.");
+        scrollTo(descricaoRef, descricaoInputRef);
+        return false;
+      }
     }
-    return true;
-  }
 
-  function validarDescricaoParaAnexo() {
-    // "anexar" exige justificar o valor das novas fotos
-    if (!descricaoAnexo.trim()) {
-      showToast("error", "Explique rapidamente por que estas novas fotos ajudam (o que mudou).");
-      scrollTo(descricaoRef, descricaoInputRef);
-      return false;
+    if (tipo === "anexar") {
+      if (!descricaoAnexo.trim()) {
+        showToast("error", "Explique rapidamente por que estas novas fotos ajudam (o que mudou).");
+        scrollTo(descricaoRef, descricaoInputRef);
+        return false;
+      }
     }
-    return true;
-  }
 
-  function validarEvidencias() {
-    // novo/anexar exigem 2..5 fotos + aceite
-    if (fotosSelecionadas.length < 2 || fotosSelecionadas.length > 5) {
-      showToast("error", "Envie entre 2 e 5 fotos para continuar.");
-      scrollTo(evidenciasRef, fotosPickRef);
-      return false;
+    if (tipo === "reforcar") {
+      if (!descricaoReforco.trim()) {
+        showToast("error", "Escreva uma frase curta para registrar o reforço.");
+        scrollTo(descricaoRef, descricaoInputRef);
+        return false;
+      }
     }
+
+    // evidências só em novo/anexar
+    if (tipo === "novo" || tipo === "anexar") {
+      if (fotosSelecionadas.length < 2 || fotosSelecionadas.length > 5) {
+        showToast("error", "Envie entre 2 e 5 fotos para continuar.");
+        scrollTo(evidenciasRef, fotosPickRef);
+        return false;
+      }
+    }
+
+    // aceite obrigatório em todos os modos
     if (!aceiteResponsabilidade) {
       showToast("error", "Confirme o aviso de responsabilidade para continuar.");
       scrollTo(avisoRef);
       return false;
     }
+
     return true;
   }
 
-  function validarDescricaoCurtaParaReforco() {
-    // reforço exige frase curta + aceite (sem fotos)
-    if (!descricaoReforco.trim()) {
-      showToast("error", "Escreva uma frase curta para registrar o reforço.");
-      scrollTo(descricaoRef, descricaoInputRef);
-      return false;
-    }
-    if (!aceiteResponsabilidade) {
-      showToast("error", "Confirme o aviso de responsabilidade para continuar.");
-      scrollTo(avisoRef);
-      return false;
-    }
-    return true;
-  }
-
-  // ---------------------------------------------------------------------------
-  // 4.9) Ações pós-triagem (define acaoEscolhida + demanda alvo)
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Importante:
-   * - "reforcar": zera fotos, pois não serão usadas
-   * - "anexar": mantém fotos (usuário pode ter começado a selecionar depois)
-   * - "novo": limpa demandaAlvoId
-   */
   function escolherReforcar(demandaId) {
     setAcaoEscolhida("reforcar");
     setDemandaAlvoId(demandaId);
@@ -693,13 +324,9 @@ export default function RegistrarProblema() {
     setDemandaAlvoId(null);
   }
 
-  // ---------------------------------------------------------------------------
-  // 4.10) Reforço (sem fotos): incrementa impacto.confirmacoes
-  // ---------------------------------------------------------------------------
-
   function confirmarReforco() {
     if (!demandaAlvoId) return;
-    if (!validarDescricaoCurtaParaReforco()) return;
+    if (!validarAntesDeEnviar("reforcar")) return;
 
     const all = getDemandas();
     const today = new Date().toISOString().slice(0, 10);
@@ -719,14 +346,9 @@ export default function RegistrarProblema() {
 
     setDemandas(next);
 
-    // MVP: alert (no Cap. 4 podemos trocar por toast + navegação direta)
     alert(`MVP: reforço registrado para ${demandaAlvoId}.`);
     navigate(`/painel/${demandaAlvoId}`);
   }
-
-  // =============================================================================
-  // 5) Toast helpers — feedback não-bloqueante
-  // =============================================================================
 
   function showToast(type, message, ms = 2600) {
     setToast({ type, message });
@@ -749,26 +371,70 @@ export default function RegistrarProblema() {
     }
   }
 
-  // =============================================================================
-  // 6) Submissões com fotos (anexar / novo) — compressão + limite + persistência
-  // =============================================================================
+  function validarIntegridadeGps() {
+    if (
+      !localRelato ||
+      typeof localRelato.lat !== "number" ||
+      typeof localRelato.lng !== "number" ||
+      !Number.isFinite(localRelato.lat) ||
+      !Number.isFinite(localRelato.lng)
+    ) {
+      setAlertOverlay({
+        title: "Localização ausente",
+        message:
+          "Não foi possível confirmar a localização (GPS) do relato. " +
+          "Selecione as fotos novamente (arquivos originais da câmera).",
+      });
+      scrollTo(evidenciasRef, fotosPickRef);
+      return false;
+    }
 
-  /**
-   * confirmarAnexo:
-   * - valida texto de anexo + evidências
-   * - compressão e conversão (filesToBase64)
-   * - verifica tamanho total em bytes (teto LocalStorage)
-   * - persiste fotos concatenando com fotos existentes da demanda alvo
-   */
+    if (!Array.isArray(fotosMeta) || fotosMeta.length !== fotosSelecionadas.length) {
+      setAlertOverlay({
+        title: "Falha de integridade (GPS)",
+        message:
+          "Não foi possível confirmar a localização de todas as fotos. " +
+          "Por segurança, selecione as fotos novamente.",
+      });
+      scrollTo(evidenciasRef, fotosPickRef);
+      return false;
+    }
+
+    return true;
+  }
+  
   async function confirmarAnexo() {
     if (!demandaAlvoId) return;
-    if (!validarDescricaoParaAnexo()) return;
-    if (!validarEvidencias()) return;
+    if (!validarAntesDeEnviar("anexar")) return;
+    if (!validarIntegridadeGps()) return;
+
+    const allAntes = getDemandas();
+    const demandaAlvo = allAntes.find((d) => d.id === demandaAlvoId);
+
+    if (demandaAlvo?.localRelato?.lat && demandaAlvo?.localRelato?.lng) {
+      const dist = distanciaMetros(
+        demandaAlvo.localRelato.lat,
+        demandaAlvo.localRelato.lng,
+        localRelato.lat,
+        localRelato.lng
+      );
+
+      if (dist > LIMITE_DISTANCIA_FOTOS_METROS) {
+        setAlertOverlay({
+          title: "Local diferente do registro original",
+          message:
+            `As novas fotos parecem ser de outro lugar.\n\n` +
+            `Distância estimada: ${Math.round(dist)}m.\n` +
+            `Limite permitido: ${LIMITE_DISTANCIA_FOTOS_METROS}m.\n\n` +
+            `Anexe fotos do mesmo local do problema registrado.`,
+        });
+        return;
+      }
+    }
 
     setIsProcessing(true);
     setProgress({ done: 0, total: fotosSelecionadas.length, fileName: "" });
 
-    // garante que overlay apareça antes do trabalho pesado
     await new Promise((r) => setTimeout(r, 0));
 
     try {
@@ -782,7 +448,6 @@ export default function RegistrarProblema() {
         onProgress: setProgress,
       });
 
-      // soma bytes estimados para impor teto
       const totalBytes = novasFotosBase64.reduce(
         (acc, x) => acc + estimateBase64Bytes(x),
         0
@@ -805,12 +470,15 @@ export default function RegistrarProblema() {
         if (d.id !== demandaAlvoId) return d;
 
         const fotosAtuais = Array.isArray(d.fotos) ? d.fotos : [];
+        const metasAtuais = Array.isArray(d.fotosMeta) ? d.fotosMeta : [];
+
         return {
           ...d,
           fotos: [...fotosAtuais, ...novasFotosBase64],
+          fotosMeta: [...metasAtuais, ...fotosMeta],
         };
       });
-
+           
       setDemandas(next);
 
       showToast("success", `Evidências anexadas à demanda ${demandaAlvoId}.`);
@@ -824,16 +492,9 @@ export default function RegistrarProblema() {
     }
   }
 
-  /**
-   * confirmarNovo:
-   * - valida descrição + evidências
-   * - compressão e conversão (filesToBase64)
-   * - verifica tamanho total em bytes
-   * - cria demanda nova via addDemanda e navega para o painel
-   */
   async function confirmarNovo() {
-    if (!validarDescricaoObrigatoria()) return;
-    if (!validarEvidencias()) return;
+    if (!validarAntesDeEnviar("novo")) return;
+    if (!validarIntegridadeGps()) return;
 
     setIsProcessing(true);
     setProgress({ done: 0, total: fotosSelecionadas.length, fileName: "" });
@@ -868,10 +529,29 @@ export default function RegistrarProblema() {
         scrollTo(evidenciasRef, fotosPickRef);
         return;
       }
+ 
+      let cidadeRelatoDetectada = city;
+      let estadoRelatoDetectado = "";
+
+      try {
+        if (localRelato?.lat && localRelato?.lng) {
+          const r = await reverseGeocodeCity(localRelato.lat, localRelato.lng);
+          if (r?.cidade) cidadeRelatoDetectada = r.cidade;
+          if (r?.estado) estadoRelatoDetectado = r.estado;
+        }
+      } catch (e) {
+        // MVP: se falhar, mantém fallback (city)
+        console.warn("Reverse geocoding falhou:", e);
+      }
 
       const criada = addDemanda({
-        cidade: city,
+        cidadeEmFoco: city,
+        cidadeRelato: cidadeRelatoDetectada, 
+        estadoRelato: estadoRelatoDetectado, 
+        cidade: cidadeRelatoDetectada, 
         categoria,
+        localRelato,
+        fotosMeta,
         bairro,
         rua,
         pontoReferencia: pontoReferencia.trim() || "",
@@ -893,49 +573,31 @@ export default function RegistrarProblema() {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // 4.11) Reset geral — usado por “Cancelar registro”
-  // ---------------------------------------------------------------------------
-
-  /**
-   * resetTotal:
-   * - volta o componente ao estado inicial
-   * - útil para “recomeçar do zero” sem sair da tela
-   */
   function resetTotal() {
-    // Fase 1
     setCategoria("Iluminação");
     setBairro("");
     setRua("");
     setPontoReferencia("");
 
-    // triagem / modo
     setTriagemAtiva(false);
     setAcaoEscolhida(null);
     setDemandaAlvoId(null);
 
-    // fase 2
     setDescricaoNovo("");
     setDescricaoReforco("");
     setDescricaoAnexo("");
     setFotosSelecionadas([]);
     setAceiteResponsabilidade(false);
 
-    // UI
     setIsProcessing(false);
     setProgress({ done: 0, total: 0, fileName: "" });
     setToast(null);
 
-    // modal
     setModalOpen(false);
     setModalFotos([]);
     setModalIdx(0);
     setModalTitle("");
   }
-
-  // =============================================================================
-  // 7) Derived state — regras de habilitação dos botões e mensagens de bloqueio
-  // =============================================================================
 
   const podeEnviarEvidencias =
     aceiteResponsabilidade &&
@@ -948,11 +610,6 @@ export default function RegistrarProblema() {
 
   const podeAnexar = podeEnviarEvidencias && descricaoAnexo.trim().length > 0;
 
-  /**
-   * motivoBloqueioAnexar:
-   * - usado no title do botão, explicando por que ele está desabilitado
-   * - (Cap. 4) aqui dá para refinar a copy e o timing do tooltip
-   */
   const motivoBloqueioAnexar = !descricaoAnexo.trim()
     ? "Explique por que estas novas fotos ajudam."
     : !aceiteResponsabilidade
@@ -963,25 +620,14 @@ export default function RegistrarProblema() {
     ? "Remova fotos para ficar no máximo de 5."
     : null;
 
-  /**
-   * mostrarPainelSugestoes:
-   * - exibe o painel apenas se triagemAtiva e existe match
-   * - mantém o painel visível enquanto usuário está em "anexar/reforcar",
-   *   para ele lembrar qual demanda está tratando.
-   */
   const mostrarPainelSugestoes =
     triagemAtiva &&
     sugestoes.length > 0 &&
     (acaoEscolhida === null || acaoEscolhida === "anexar" || acaoEscolhida === "reforcar");
 
-  // =============================================================================
-  // 8) Render — UI
-  // =============================================================================
-
   return (
     <section className="flex-1 w-full">
       <div className="w-full max-w-5xl mx-auto px-4 py-10 space-y-6">
-        {/* Toast fixo no topo: feedback leve sem interromper fluxo */}
         {toast && (
           <div className="fixed z-50 top-4 right-4 left-4 md:left-auto md:w-[420px]">
             <div
@@ -1003,14 +649,13 @@ export default function RegistrarProblema() {
           </div>
         )}
 
-        {/* Header / contexto da cidade */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
             <h1 className="text-2xl md:text-3xl font-semibold">
               Registrar um problema
             </h1>
             <p className="text-textsoft text-sm leading-relaxed">
-              Cidade ativa:{" "}
+              Cidade em foco:{" "}
               <span className="text-textmain">
                 {cityTheme.cidadeShort ?? cityTheme.name}
               </span>
@@ -1023,14 +668,12 @@ export default function RegistrarProblema() {
 
         {acaoEscolhida === null && (
           <>
-            {/* Fase 1: Dados do problema + botão de triagem no mesmo box */}
             <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 backdrop-blur-sm p-5 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold">Dados do problema</h2>
+                <h2 className="text-lg font-semibold">Local e categoria do problema</h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                {/* Categoria */}
                 <label className="space-y-1 md:col-span-4">
                   <span className="text-xs text-textmuted">Categoria</span>
                   <select
@@ -1052,7 +695,6 @@ export default function RegistrarProblema() {
                   </select>
                 </label>
 
-                {/* Bairro */}
                 <label className="space-y-1 md:col-span-4">
                   <span className="text-xs text-textmuted">Bairro</span>
                   <input
@@ -1069,7 +711,6 @@ export default function RegistrarProblema() {
                   />
                 </label>
 
-                {/* Rua */}
                 <label className="space-y-1 md:col-span-4">
                   <span className="text-xs text-textmuted">Rua</span>
                   <input
@@ -1086,7 +727,6 @@ export default function RegistrarProblema() {
                   />
                 </label>
 
-                {/* Ponto de referência */}
                 <label className="space-y-1 md:col-span-9">
                   <span className="text-xs text-textmuted">
                     Ponto de referência (opcional)
@@ -1105,14 +745,13 @@ export default function RegistrarProblema() {
                   />
                 </label>
 
-                {/* CTA Triagem */}
                 <div className="md:col-span-3 flex items-end">
                   <PulseButton
                     onClick={iniciarTriagem}
                     disabled={!triagemHabilitada}
                     title={
                       triagemHabilitada
-                        ? "Checar se já existe algo parecido"
+                        ? "Continuar para registrar o problema"
                         : "Preencha Categoria, Bairro e Rua para habilitar"
                     }
                     intense={triagemHabilitada}
@@ -1120,7 +759,7 @@ export default function RegistrarProblema() {
                       triagemHabilitada ? "shadow-[0_0_0_1px_rgba(16,185,129,0.15)]" : ""
                     }`}
                   >
-                    Verificar se já existe
+                    Continuar
                   </PulseButton>
                 </div>
               </div>
@@ -1128,10 +767,9 @@ export default function RegistrarProblema() {
               {!triagemAtiva ? (
                 <p className="text-sm text-textmuted">
                   Preencha no mínimo{" "}
-                  <span className="text-textmain">Categoria + Bairro + Rua</span> e
-                  clique em{" "}
-                  <span className="text-textmain">“Verificar se já existe”</span>.
-                  Se encontrarmos um registro parecido, você decide:{" "}
+                  <span className="text-textmain">Categoria + Bairro + Rua</span> e clique em{" "}
+                  <span className="text-textmain">“Continuar”</span>. O sistema vai checar
+                  automaticamente se já existe algo parecido e, se encontrar, você decide:{" "}
                   <span className="text-textmain">reforçar</span>,{" "}
                   <span className="text-textmain">anexar</span> novas fotos, ou{" "}
                   <span className="text-textmain">registrar</span> como novo.
@@ -1139,7 +777,6 @@ export default function RegistrarProblema() {
               ) : null}
             </div>
 
-            {/* Mensagem quando triagem rodou e não achou match */}
             {triagemAtiva && sugestoes.length === 0 && (
               <p className="text-sm text-textmuted">
                 Não encontramos demandas parecidas. Pode seguir com a descrição e as evidências.
@@ -1148,7 +785,6 @@ export default function RegistrarProblema() {
           </>
         )}
 
-        {/* FASE 1.5: Painel de sugestões (quando há match) */}
         {mostrarPainelSugestoes && (
           <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 p-5 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1212,7 +848,6 @@ export default function RegistrarProblema() {
                     <p className="text-[12px] text-textmuted">Sem fotos neste mock.</p>
                   )}
 
-                  {/* Ações disponíveis apenas quando ainda não escolheu uma ação */}
                   {acaoEscolhida === null && (
                     <div className="flex flex-wrap gap-2 pt-2">
                       <SecondaryActionButton onClick={() => escolherReforcar(d.id)}>
@@ -1234,57 +869,8 @@ export default function RegistrarProblema() {
           </div>
         )}
 
-        {/* FASE 2: Descrição + Evidências + Aviso (render apenas se acaoEscolhida !== null) */}
         {acaoEscolhida && (
           <>
-            {/* Descrição: sempre aparece; muda título/placeholder/rows conforme ação */}
-            <div
-              ref={descricaoRef}
-              className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 backdrop-blur-sm p-5 space-y-3"
-            >
-              <h2 className="text-lg font-semibold">
-                {acaoEscolhida === "reforcar"
-                  ? "Confirmação rápida"
-                  : acaoEscolhida === "anexar"
-                  ? "Por que estas novas fotos ajudam?"
-                  : "Descrição do problema"}
-              </h2>
-
-              <textarea
-                ref={descricaoInputRef}
-                value={
-                  acaoEscolhida === "reforcar"
-                    ? descricaoReforco
-                    : acaoEscolhida === "anexar"
-                    ? descricaoAnexo
-                    : descricaoNovo
-                }
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (acaoEscolhida === "reforcar") setDescricaoReforco(v);
-                  else if (acaoEscolhida === "anexar") setDescricaoAnexo(v);
-                  else setDescricaoNovo(v);
-                }}
-                rows={acaoEscolhida === "reforcar" ? 2 : acaoEscolhida === "anexar" ? 3 : 4}
-                placeholder={
-                  acaoEscolhida === "reforcar"
-                    ? "Ex.: Confirmo que o poste segue apagado e o trecho continua perigoso."
-                    : acaoEscolhida === "anexar"
-                    ? "Ex.: A situação piorou desde o último registro / novas fotos mostram o problema à noite."
-                    : "Ex.: Buraco grande na via, perto do cruzamento com a Rua X, causando risco a pedestres e veículos."
-                }
-                className={[
-                  "w-full rounded-lg px-3 py-2 text-sm leading-relaxed",
-                  "bg-surfaceLight text-textmain border border-borderSubtle",
-                  "outline-none focus:ring-2 focus:ring-primary/40",
-                  "hover:bg-surfaceLight/70 transition",
-                  "placeholder:text-textmuted/70",
-                  "resize-none",
-                ].join(" ")}
-              />
-            </div>
-
-            {/* Evidências: apenas em "novo" e "anexar" */}
             {(acaoEscolhida === "novo" || acaoEscolhida === "anexar") && (
               <div
                 ref={evidenciasRef}
@@ -1336,7 +922,7 @@ export default function RegistrarProblema() {
 
                 {fotosSelecionadas.length ? (
                   <EvidenceGrid
-                    fotos={fotosSelecionadas.map((file) => URL.createObjectURL(file))}
+                    fotos={fotosPreviewUrls}
                     renderFooter={(idx) => (
                       <button
                         type="button"
@@ -1355,7 +941,52 @@ export default function RegistrarProblema() {
               </div>
             )}
 
-            {/* Aviso: sempre presente (novo/anexar/reforçar) */}
+            <div
+              ref={descricaoRef}
+              className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 backdrop-blur-sm p-5 space-y-3"
+            >
+              <h2 className="text-lg font-semibold">
+                {acaoEscolhida === "reforcar"
+                  ? "Confirmação rápida"
+                  : acaoEscolhida === "anexar"
+                  ? "Por que estas novas fotos ajudam?"
+                  : "Descrição do problema"}
+              </h2>
+
+              <textarea
+                ref={descricaoInputRef}
+                value={
+                  acaoEscolhida === "reforcar"
+                    ? descricaoReforco
+                    : acaoEscolhida === "anexar"
+                    ? descricaoAnexo
+                    : descricaoNovo
+                }
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (acaoEscolhida === "reforcar") setDescricaoReforco(v);
+                  else if (acaoEscolhida === "anexar") setDescricaoAnexo(v);
+                  else setDescricaoNovo(v);
+                }}
+                rows={acaoEscolhida === "reforcar" ? 2 : acaoEscolhida === "anexar" ? 3 : 4}
+                placeholder={
+                  acaoEscolhida === "reforcar"
+                    ? "Ex.: Confirmo que o poste segue apagado e o trecho continua perigoso."
+                    : acaoEscolhida === "anexar"
+                    ? "Ex.: A situação piorou desde o último registro / novas fotos mostram o problema à noite."
+                    : "Ex.: Buraco grande na via, perto do cruzamento com a Rua X, causando risco a pedestres e veículos."
+                }
+                className={[
+                  "w-full rounded-lg px-3 py-2 text-sm leading-relaxed",
+                  "bg-surfaceLight text-textmain border border-borderSubtle",
+                  "outline-none focus:ring-2 focus:ring-primary/40",
+                  "hover:bg-surfaceLight/70 transition",
+                  "placeholder:text-textmuted/70",
+                  "resize-none",
+                ].join(" ")}
+              />
+            </div>
+
             <div
               ref={avisoRef}
               className="rounded-2xl border border-surfaceLight bg-surfaceLight/10 p-5 space-y-3"
@@ -1376,7 +1007,6 @@ export default function RegistrarProblema() {
                 </span>
               </label>
 
-              {/* CTA final varia conforme ação escolhida */}
               <div className="flex flex-wrap gap-2">
                 {acaoEscolhida === "reforcar" && (
                   <PulseButton
@@ -1435,7 +1065,6 @@ export default function RegistrarProblema() {
                 </SecondaryActionButton>
               </div>
 
-              {/* Contexto extra quando estiver em modo "anexar" */}
               {acaoEscolhida === "anexar" && demandaAlvoId ? (
                 <p className="text-[11px] text-textmuted">
                   Você está anexando evidências para{" "}
@@ -1447,7 +1076,6 @@ export default function RegistrarProblema() {
         )}
       </div>
 
-      {/* Modal: fotos existentes nas sugestões */}
       <ModalFotos
         open={modalOpen}
         fotos={modalFotos}
@@ -1458,7 +1086,13 @@ export default function RegistrarProblema() {
         title={modalTitle}
       />
 
-      {/* Overlay: processamento de fotos */}
+      <AlertOverlay
+        open={!!alertOverlay}
+        title={alertOverlay?.title}
+        message={alertOverlay?.message}
+        onClose={() => setAlertOverlay(null)}
+      />
+      
       <ProcessingOverlay open={isProcessing} progress={progress} />
     </section>
   );

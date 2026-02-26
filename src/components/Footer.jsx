@@ -43,7 +43,7 @@ export default function Footer() {
             <div className="flex items-center gap-2">
               <div className="leading-tight">
                 <div className="text-[18px] text-textsoft">
-                  Cidade ativa:
+                  Cidade em foco:
                 </div>
               </div>
               <img

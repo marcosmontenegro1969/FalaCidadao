@@ -58,8 +58,17 @@ function normalizeSeedDemandas(mocks) {
             { data: createdAt, tipo: "sistema", evento: "Encaminhada para triagem Fala Cidadão (MVP)." },
           ];
 
+    const cidadeRelato = d.cidadeRelato ?? d.cidade ?? "default";
+    const cidadeEmFoco = d.cidadeEmFoco ?? d.cidade ?? cidadeRelato ?? "default";
+
     return {
       ...d,
+      cidadeRelato,
+      cidadeEmFoco,
+
+      // compat (por enquanto): mantém 'cidade' apontando para a cidade do relato
+      cidade: cidadeRelato,
+
       id,
       createdAt,
       status: d.status ?? "Em análise",
@@ -107,9 +116,17 @@ export function addDemanda(partial) {
     email: null,
   };
 
+  const cidadeRelato = partial.cidadeRelato ?? partial.cidade ?? "default";
+  const cidadeEmFoco = partial.cidadeEmFoco ?? partial.cidade ?? cidadeRelato ?? "default";
   
   const demanda = {
     ...partial,
+
+    cidadeRelato,
+    cidadeEmFoco,
+
+    // compat (por enquanto)
+    cidade: cidadeRelato,
 
     id,
     status: "Em análise",
