@@ -29,3 +29,10 @@ docs/
 *.doc
 *.docx
 *.zip
+
+# binários locais
+exiftool.exe
+
+# fotos de teste soltas
+public/mock/IMG_*.jpg
+public/mock/DMD-*.jpg

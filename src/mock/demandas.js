@@ -1,10 +1,28 @@
 // src/mock/demandas.js
+
 export const MOCK_DEMANDAS_EXISTENTES = [
   {
     id: "DMD-2025-0001",
-    cidade: "recife",
+
+    // NOVO (modelo atual)
+    cidadeEmFoco: "recife",
+    cidadeRelato: "recife",
+    cidadeRelatoLabel: "Recife",
+    estadoRelato: "PE",
+    enderecoDetectado: {
+      rua: "Rua X",
+      bairro: "Boa Viagem",
+      cidade: "Recife",
+      estado: "PE",
+      lat: null,
+      lng: null,
+    },
+
+    // LEGADO (compat temporária)
+    cidade: "Recife",
     bairro: "Boa Viagem",
     rua: "Rua X",
+
     categoria: "Iluminação",
     descricao: "Poste apagado há 3 dias na Rua X",
     pontoReferencia: "Próximo ao supermercado ABC",
@@ -18,11 +36,27 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     ],
     impacto: { confirmacoes: 35, ultimaConfirmacao: "2025-12-16" },
   },
+
   {
     id: "DMD-2025-0004",
-    cidade: "recife",
+
+    cidadeEmFoco: "recife",
+    cidadeRelato: "recife",
+    cidadeRelatoLabel: "Recife",
+    estadoRelato: "PE",
+    enderecoDetectado: {
+      rua: "Rua Y",
+      bairro: "Casa Forte",
+      cidade: "Recife",
+      estado: "PE",
+      lat: null,
+      lng: null,
+    },
+
+    cidade: "Recife",
     bairro: "Casa Forte",
     rua: "Rua Y",
+
     categoria: "Outros",
     descricao: "Árvore caída parcialmente obstruindo a calçada.",
     pontoReferencia: "Próximo ao ponto de ônibus na Rua Y",
@@ -36,30 +70,61 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     ],
     impacto: { confirmacoes: 12, ultimaConfirmacao: "2025-12-15" },
   },
+
   {
     id: "DMD-2025-0005",
-    cidade: "recife",
+
+    cidadeEmFoco: "recife",
+    cidadeRelato: "recife",
+    cidadeRelatoLabel: "Recife",
+    estadoRelato: "PE",
+    enderecoDetectado: {
+      rua: "Av. Sul Governador Cid Sampaio",
+      bairro: "Afogados",
+      cidade: "Recife",
+      estado: "PE",
+      lat: null,
+      lng: null,
+    },
+
+    cidade: "Recife",
     bairro: "Afogados",
     rua: "Av. Sul Governador Cid Sampaio",
+
     categoria: "Via pública",
-    descricao: "Buraco profundo na faixa da direita, causando desvios bruscos e risco de acidentes.",
+    descricao:
+      "Buraco profundo na faixa da direita, causando desvios bruscos e risco de acidentes.",
     pontoReferencia: "Próximo ao semáforo da Av. Sul Governador Cid Sampaio",
     status: "Em análise",
     createdAt: "2025-12-16",
     userId: "cidadao_001",
-    fotos: [
-      "/mock/DMD-2025-0005-1.jpg",
-      "/mock/DMD-2025-0005-2.jpg"
-    ],
-    impacto: { confirmacoes: 8, ultimaConfirmacao: "2025-12-17" }
+    fotos: ["/mock/DMD-2025-0005-1.jpg", "/mock/DMD-2025-0005-2.jpg"],
+    impacto: { confirmacoes: 8, ultimaConfirmacao: "2025-12-17" },
   },
+
   {
     id: "DMD-2025-0006",
-    cidade: "recife",
+
+    cidadeEmFoco: "recife",
+    cidadeRelato: "recife",
+    cidadeRelatoLabel: "Recife",
+    estadoRelato: "PE",
+    enderecoDetectado: {
+      rua: "Rua do Futuro II",
+      bairro: "Ibura",
+      cidade: "Recife",
+      estado: "PE",
+      lat: null,
+      lng: null,
+    },
+
+    cidade: "Recife",
     bairro: "Ibura",
     rua: "Rua do Futuro II",
+
     categoria: "Limpeza urbana",
-    descricao: "Acúmulo frequente de lixo e entulho em terreno baldio, com mau cheiro e presença de animais.",
+    descricao:
+      "Acúmulo frequente de lixo e entulho em terreno baldio, com mau cheiro e presença de animais.",
     pontoReferencia: "Entre as ruas A e B no Ibura",
     status: "Em andamento",
     createdAt: "2025-12-14",
@@ -67,25 +132,39 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     fotos: [
       "/mock/DMD-2025-0006-1.jpg",
       "/mock/DMD-2025-0006-2.jpg",
-      "/mock/DMD-2025-0006-3.jpg"
+      "/mock/DMD-2025-0006-3.jpg",
     ],
-    impacto: { confirmacoes: 21, ultimaConfirmacao: "2025-12-17" }
+    impacto: { confirmacoes: 21, ultimaConfirmacao: "2025-12-17" },
   },
+
   {
     id: "DMD-2025-0007",
-    cidade: "jaboatao",
+
+    cidadeEmFoco: "jaboatao",
+    cidadeRelato: "jaboatao",
+    cidadeRelatoLabel: "Jaboatão dos Guararapes",
+    estadoRelato: "PE",
+    enderecoDetectado: {
+      rua: "Av. Ayrton Senna",
+      bairro: "Piedade",
+      cidade: "Jaboatão dos Guararapes",
+      estado: "PE",
+      lat: null,
+      lng: null,
+    },
+
+    cidade: "Jaboatão dos Guararapes",
     bairro: "Piedade",
     rua: "Av. Ayrton Senna",
+
     categoria: "Sinalização",
-    descricao: "Faixa de pedestres apagada em frente à escola, dificultando a travessia com segurança.",
+    descricao:
+      "Faixa de pedestres apagada em frente à escola, dificultando a travessia com segurança.",
     pontoReferencia: "Em frente à Escola Municipal Piedade",
     status: "Resolvido",
     createdAt: "2025-12-05",
     userId: "cidadao_001",
-    fotos: [
-      "/mock/DMD-2025-0007-1.jpg",
-      "/mock/DMD-2025-0007-2.jpg"
-    ],
-    impacto: { confirmacoes: 15, ultimaConfirmacao: "2025-12-10" }
-  }
+    fotos: ["/mock/DMD-2025-0007-1.jpg", "/mock/DMD-2025-0007-2.jpg"],
+    impacto: { confirmacoes: 15, ultimaConfirmacao: "2025-12-10" },
+  },
 ];

@@ -11,6 +11,14 @@ import BackButton from "../components/BackButton";
 
 const CURRENT_USER_ID = "cidadao_001";
 
+function formatDateBR(iso) {
+  if (!iso || typeof iso !== "string") return "—";
+  // Espera "YYYY-MM-DD"
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return iso;
+  return `${d}/${m}/${y}`;
+}
+
 function statusBadgeClass(status) {
   switch (status) {
     case "Em análise":
@@ -131,8 +139,8 @@ export default function DetalheDemanda() {
 
   // Impacto da demanda
   const confirmacoes = demanda?.impacto?.confirmacoes ?? 0;
-  const ultimaConfirmacao = demanda?.impacto?.ultimaConfirmacao ?? null;
-
+  const ultimaConfirmacao = formatDateBR(demanda?.impacto?.ultimaConfirmacao);
+  
   // Modal de foto
   const [modalOpen, setModalOpen] = useState(false);
   const [fotoIndex, setFotoIndex] = useState(0);
@@ -155,7 +163,12 @@ export default function DetalheDemanda() {
   }
 
   const podeAnexar = demanda.userId === CURRENT_USER_ID;
-  const cityTheme = CITY_THEMES[demanda.cidade] ?? CITY_THEMES.default;
+  const cidadeExibida = demanda.cidadeRelato || demanda.cidade || "";
+  const estadoExibido = demanda.estadoRelato || "";
+
+  const cityTheme = CITY_THEMES[cidadeExibida] ?? CITY_THEMES.default;
+  const cidadeEstadoExibido =
+    [cityTheme.cidadeShort ?? cidadeExibida, estadoExibido].filter(Boolean).join(" / ") || "—";
 
   const orgaoExibicao = demanda.orgao?.nome
     ? demanda.orgao.nome
@@ -226,12 +239,12 @@ export default function DetalheDemanda() {
               <span className="px-2 py-1 rounded-full border border-surfaceLight text-textmuted">
                 Cidade:{" "}
                 <span className="text-textmain">
-                  {cityTheme.cidadeShort ?? cityTheme.name}
+                  {cidadeEstadoExibido}
                 </span>
               </span>
             </div>
           </div>
-<         BackButton to="/" />
+          <BackButton to="/" />
         </div>
 
         {/* Card principal (resumo) */}
@@ -254,9 +267,8 @@ export default function DetalheDemanda() {
             {/* Linha 2 — Localização */}
             <div className="text-textmuted text-sm space-y-1">
               <div>
-                {demanda.bairro} · {cityTheme.cidadeShort ?? demanda.cidade}
+                {demanda.bairro || "—"} · {cidadeEstadoExibido}
               </div>
-
               {demanda.rua ? (
                 <div className="text-xs text-textsoft">
                   Endereço: <span className="text-textmain">{demanda.rua}</span>
@@ -366,7 +378,7 @@ export default function DetalheDemanda() {
                   className="rounded-xl border border-borderSubtle bg-overlay p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2"
                 >
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-textmuted">{h.data}</span>
+                    <span className="text-textmuted">{formatDateBR(h.data)}</span>
                     {h.tipo && (
                       <span
                         className={`px-2 py-0.5 rounded-full ${tipoBadge(

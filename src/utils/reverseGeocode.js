@@ -3,7 +3,7 @@ export async function reverseGeocodeCity(lat, lng) {
     `https://nominatim.openstreetmap.org/reverse?format=jsonv2` +
     `&lat=${encodeURIComponent(lat)}` +
     `&lon=${encodeURIComponent(lng)}` +
-    `&zoom=12&addressdetails=1`;
+    `&zoom=18&addressdetails=1`;
 
   const res = await fetch(url, {
     headers: {
@@ -21,5 +21,12 @@ export async function reverseGeocodeCity(lat, lng) {
     a.city || a.town || a.village || a.municipality || a.county || "";
 
   const estado = a.state || "";
-  return { cidade, estado, raw: data };
+
+  const bairro =
+    a.suburb || a.neighbourhood || a.quarter || a.city_district || "";
+
+  const rua =
+    a.road || a.pedestrian || a.footway || a.path || "";
+
+  return { cidade, estado, bairro, rua, raw: data };
 }

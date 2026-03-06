@@ -34,21 +34,107 @@ function jaccard(aTokens = [], bTokens = []) {
   return uni === 0 ? 0 : inter / uni;
 }
 
-export function computeDupScore({ cidade, categoria, bairro, rua, descricao }, demanda) {
-  if (!cidade || demanda.cidade !== cidade) return 0;
+function toCityKey(s = "") {
+  return String(s)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[/.-]/g, " ")   // separadores viram espaço
+    .replace(/[^\w\s]/g, " ") // pontuação vira espaço
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const cityKeyAliases = {
+  "jaboatao dos guararapes": "jaboatao",
+  "jaboatao dos guararapes pe": "jaboatao",
+  "jaboatao": "jaboatao",
+  "jaboatao pe": "jaboatao",
+
+  "cidade do recife": "recife",
+  "recife": "recife",
+  "recife pe": "recife",
+
+  "olinda": "olinda",
+  "olinda pe": "olinda",
+};
+
+function normalizeCityKey(s = "") {
+  const k = toCityKey(s);
+  return cityKeyAliases[k] || k;
+}
+
+function distanciaMetros(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = (v) => (v * Math.PI) / 180;
+
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function getCoords(d) {
+  const lat = d?.localRelato?.lat ?? d?.enderecoDetectado?.lat ?? d?.lat ?? null;
+  const lng = d?.localRelato?.lng ?? d?.enderecoDetectado?.lng ?? d?.lng ?? null;
+  return (typeof lat === "number" && typeof lng === "number") ? { lat, lng } : null;
+}
+
+export function computeDupScore({ cidade, categoria, bairro, rua, descricao, lat, lng }, demanda) {
+  const demandaCityRaw =
+    demanda?.cidadeRelato ||
+    demanda?.cidade ||
+    demanda?.enderecoDetectado?.cidade ||
+    demanda?.cidadeRelatoLabel ||
+    "";
+
+  const demandaCityKey = normalizeCityKey(demandaCityRaw);
+  const inputCityKey = normalizeCityKey(cidade || "");
+
+  if (!inputCityKey || demandaCityKey !== inputCityKey) return 0;
 
   let score = 0;
 
-  if (categoria && demanda.categoria === categoria) score += 0.45;
+  // 1) Coordenadas (mais forte)
+  const a = (typeof lat === "number" && typeof lng === "number") ? { lat, lng } : null;
+  const b = getCoords(demanda);
 
-  if (bairro && normalizeText(demanda.bairro) === normalizeText(bairro)) score += 0.2;
+  if (a && b) {
+    const dist = distanciaMetros(a.lat, a.lng, b.lat, b.lng);
 
-  if (rua && demanda.rua && normalizeText(demanda.rua).includes(normalizeText(rua))) {
-    score += 0.15;
+    // mesmos arredores => alto
+    if (dist <= 30) score += 0.60;
+    else if (dist <= 80) score += 0.40;
+    else if (dist <= 150) score += 0.25;
   }
 
-  const sim = jaccard(tokenize(descricao), tokenize(demanda.descricao));
-  score += Math.min(0.2, sim * 0.2);
+  // 2) Endereço (preferir enderecoDetectado, fallback legado)
+  const demandaBairro = (demanda?.enderecoDetectado?.bairro || demanda?.bairro || "").trim();
+  const demandaRua = (demanda?.enderecoDetectado?.rua || demanda?.rua || "").trim();
 
-  return score;
+  const inputBairro = (bairro || "").trim();
+  const inputRua = (rua || "").trim();
+
+  // 3) Categoria (peso menor agora)
+  if (categoria && demanda?.categoria === categoria) score += 0.25;
+
+  // 4) Bairro
+  if (inputBairro && demandaBairro && normalizeText(demandaBairro) === normalizeText(inputBairro)) {
+    score += 0.10;
+  }
+
+  // 5) Rua
+  if (inputRua && demandaRua && normalizeText(demandaRua).includes(normalizeText(inputRua))) {
+    score += 0.05;
+  }
+
+  // 6) Texto (bem leve, porque no input você ainda manda descricao "")
+  const sim = jaccard(tokenize(descricao || ""), tokenize(demanda?.descricao || ""));
+  score += Math.min(0.05, sim * 0.05);
+
+  return Math.min(1, score);
 }
