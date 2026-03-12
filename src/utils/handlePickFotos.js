@@ -28,7 +28,7 @@ export async function handlePickFotos({
   // Sempre zerar o input para permitir re-selecionar o mesmo arquivo
   e.target.value = "";
 
-  // Junta com as já selecionadas e corta em 5
+  // Junta com as já selecionadas e limita em 3
   const merged = [...fotosSelecionadas, ...files].slice(0, 3);
 
   if (merged.length < 1 || merged.length > 3) {

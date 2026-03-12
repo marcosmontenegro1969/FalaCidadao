@@ -54,7 +54,6 @@ export default function RegistrarProblema() {
   const [pontoReferencia, setPontoReferencia] = useState("");
 
   const [descricaoNovo, setDescricaoNovo] = useState("");
-  const [descricaoReforco, setDescricaoReforco] = useState("");
 
   const [fotosSelecionadas, setFotosSelecionadas] = useState([]);
   const fotosPreviewUrls = useFotoPreviews(fotosSelecionadas);
@@ -186,26 +185,15 @@ export default function RegistrarProblema() {
   }
 
   function validarAntesDeEnviar(tipo) {
-    // tipo: "novo" | "anexar" | "reforcar"
-
+    // No MVP atual, fotos são permitidas apenas no primeiro registro.
+    // Reforços não recebem novas evidências.
     if (tipo === "novo") {
       if (!descricaoNovo.trim()) {
         showToast("error", "Descreva o problema para continuar.");
         scrollTo(descricaoRef, descricaoInputRef);
         return false;
       }
-    }
 
-    if (tipo === "reforcar") {
-      if (!descricaoReforco.trim()) {
-        showToast("error", "Escreva uma frase curta para registrar o reforço.");
-        scrollTo(descricaoRef, descricaoInputRef);
-        return false;
-      }
-    }
-
-    // evidências só em novo registro (num proximo mvp poderemos permitir o envio de fotos também no reforço)
-   if (tipo === "novo") {
       if (fotosSelecionadas.length < 1 || fotosSelecionadas.length > 3) {
         showToast("error", "Envie entre 1 e 3 fotos para continuar.");
         scrollTo(evidenciasRef, fotosPickRef);
@@ -227,6 +215,9 @@ export default function RegistrarProblema() {
     setAcaoEscolhida("reforcar");
     setDemandaAlvoId(demandaId);
     setFotosSelecionadas([]);
+    setFotosMeta([]);
+    setLocalRelato(null);
+    setEnderecoDetectado(null);
   }
 
   function escolherNovo() {
@@ -329,7 +320,19 @@ export default function RegistrarProblema() {
           return;
         }
 
-        showToast("error", "Não foi possível processar as fotos. Tente novamente com imagens menores.");
+        if (res.reason === "CONVERSAO" || res.reason === "QTD_FOTOS") {
+          showToast(
+            "error",
+            res.message || "Não foi possível validar as fotos após o processamento."
+          );
+          scrollTo(evidenciasRef, fotosPickRef);
+          return;
+        }
+
+        showToast(
+          "error",
+          "Não foi possível processar as fotos. Tente novamente com imagens menores."
+        );
         return;
       }
 
@@ -353,13 +356,16 @@ export default function RegistrarProblema() {
     setDemandaAlvoId(null);
 
     setDescricaoNovo("");
-    setDescricaoReforco("");
     setFotosSelecionadas([]);
+    setFotosMeta([]);
+    setLocalRelato(null);
+    setEnderecoDetectado(null);
     setAceiteResponsabilidade(false);
 
     setIsProcessing(false);
     setProgress({ done: 0, total: 0, fileName: "" });
     setToast(null);
+    setAlertOverlay(null);
 
     setModalOpen(false);
     setModalFotos([]);
@@ -369,7 +375,7 @@ export default function RegistrarProblema() {
 
   const podeEnviarEvidencias = aceiteResponsabilidade && fotosSelecionadas.length >= 1 && fotosSelecionadas.length <= 3;
 
-  const podeReforcar = aceiteResponsabilidade && descricaoReforco.trim().length > 0;
+  const podeReforcar = !!demandaAlvoId && aceiteResponsabilidade;
 
   const podeRegistrarNovo = podeEnviarEvidencias && descricaoNovo.trim().length > 0;
 
@@ -528,28 +534,18 @@ export default function RegistrarProblema() {
 
             <EnderecoDetectadoCard enderecoDetectado={enderecoDetectado} localRelato={localRelato} />
 
-            {acaoEscolhida && (
+            {acaoEscolhida === "novo" && (
               <div
                 ref={descricaoRef}
                 className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 backdrop-blur-sm p-5 space-y-3"
               >
-                <h2 className="text-lg font-semibold">
-                  {acaoEscolhida === "reforcar" ? "Confirmação rápida" : "Descrição do problema"}
-                </h2>
+                <h2 className="text-lg font-semibold">Descrição do problema</h2>
                 <textarea
                   ref={descricaoInputRef}
-                  value={acaoEscolhida === "reforcar" ? descricaoReforco : descricaoNovo}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (acaoEscolhida === "reforcar") setDescricaoReforco(v);
-                    else setDescricaoNovo(v);
-                  }}
-                  rows={acaoEscolhida === "reforcar" ? 2 : 4}
-                  placeholder={
-                    acaoEscolhida === "reforcar"
-                      ? "Ex.: Confirmo que o problema continua e está afetando o local."
-                      : "Ex.: Buraco grande na via, próximo ao cruzamento com a Rua X, causando risco a pedestres e veículos."
-                  }
+                  value={descricaoNovo}
+                  onChange={(e) => setDescricaoNovo(e.target.value)}
+                  rows={4}
+                  placeholder="Ex.: Buraco grande na via, próximo ao cruzamento com a Rua X, causando risco a pedestres e veículos."
                   className={[
                     "w-full rounded-lg px-3 py-2 text-sm leading-relaxed",
                     "bg-surfaceLight text-textmain border border-borderSubtle",
@@ -561,6 +557,16 @@ export default function RegistrarProblema() {
                 />
               </div>
             )}
+
+            {acaoEscolhida === "reforcar" && (
+              <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 backdrop-blur-sm p-5 space-y-2">
+                <h2 className="text-lg font-semibold">Confirmação rápida</h2>
+                <p className="text-sm text-textsoft leading-relaxed">
+                  Você está confirmando que essa ocorrência continua existindo e merece atenção.
+                </p>
+              </div>
+            )}            
+
             <div
               ref={avisoRef}
               className="rounded-2xl border border-surfaceLight bg-surfaceLight/10 p-5 space-y-3"

@@ -1,7 +1,6 @@
 // src/services/demandasActions.js
 
 import { addDemanda, getDemandas, setDemandas } from "../storage/demandasStorage";
-import { distanciaMetros } from "../utils/exifGps";
 import {
   MAX_FOTOS_TOTAL_BYTES,
   estimateBase64Bytes,
@@ -32,98 +31,7 @@ export function reforcarDemanda({ demandaAlvoId }) {
   setDemandas(next);
 }
 
-/**
- * Anexa novas evidências (fotos) a uma demanda existente.
- */
-export async function anexarEvidencias({
-  demandaAlvoId,
-  fotosSelecionadas,
-  fotosMeta,
-  localRelato,
-  limiteDistanciaMetros,
-  onProgress,
-}) {
-  const allAntes = getDemandas();
-  const demandaAlvo = allAntes.find((d) => d.id === demandaAlvoId);
-  const fotosAtuais = Array.isArray(demandaAlvo?.fotos) ? demandaAlvo.fotos : [];
-
-  if (fotosAtuais.length >= 5) {
-    return {
-      ok: false,
-      reason: "LIMITE",
-      message: "Essa ocorrência já atingiu o limite máximo de 5 fotos.",
-    };
-  }
-
-  const espacoRestante = 5 - fotosAtuais.length;
-
-  if (fotosSelecionadas.length > espacoRestante) {
-    return {
-      ok: false,
-      reason: "LIMITE",
-      message: `Você pode anexar no máximo ${espacoRestante} foto(s) a esta ocorrência. Limite total: 5 fotos.`,
-    };
-  }
-
-  if (demandaAlvo?.localRelato?.lat && demandaAlvo?.localRelato?.lng) {
-    const dist = distanciaMetros(
-      demandaAlvo.localRelato.lat,
-      demandaAlvo.localRelato.lng,
-      localRelato.lat,
-      localRelato.lng
-    );
-
-    if (dist > limiteDistanciaMetros) {
-      return {
-        ok: false,
-        reason: "DISTANTE",
-        dist,
-      };
-    }
-  }
-
-  const novasFotosBase64 = await filesToBase64(fotosSelecionadas, {
-    maxW: 1280,
-    maxH: 1280,
-    quality: 0.72,
-    mime: "image/jpeg",
-    onProgress,
-  });
-
-  const totalBytes = novasFotosBase64.reduce((acc, x) => acc + estimateBase64Bytes(x), 0);
-
-  if (totalBytes > MAX_FOTOS_TOTAL_BYTES) {
-    return {
-      ok: false,
-      reason: "PESO",
-      totalBytes,
-      message: `As fotos ficaram muito pesadas (${formatBytes(totalBytes)}). Tente menos fotos ou imagens menores.`,
-    };
-  }
-
-  const all = getDemandas();
-
-  const next = all.map((d) => {
-    if (d.id !== demandaAlvoId) return d;
-
-    const fotosExistentes = Array.isArray(d.fotos) ? d.fotos : [];
-    const metasAtuais = Array.isArray(d.fotosMeta) ? d.fotosMeta : [];
-
-    return {
-      ...d,
-      fotos: [...fotosExistentes, ...novasFotosBase64],
-      fotosMeta: [...metasAtuais, ...fotosMeta],
-    };
-  });
-
-  setDemandas(next);
-
-  return { ok: true };
-}
-
-/**
- * Cria uma nova demanda.
- */
+// Cria uma nova demanda.
 export async function criarDemanda({
   cityEmFoco,
   cidadeRelatoKey,
@@ -145,6 +53,23 @@ export async function criarDemanda({
     mime: "image/jpeg",
     onProgress,
   });
+
+  if (fotosBase64.length !== fotosSelecionadas.length) {
+    return {
+      ok: false,
+      reason: "CONVERSAO",
+      message:
+        "Não foi possível processar todas as fotos selecionadas. Tente novamente com imagens originais da câmera.",
+    };
+  }
+
+  if (fotosBase64.length < 1 || fotosBase64.length > 3) {
+    return {
+      ok: false,
+      reason: "QTD_FOTOS",
+      message: "Após o processamento, foi necessário manter entre 1 e 3 fotos válidas.",
+    };
+  }
 
   const totalBytes = fotosBase64.reduce((acc, x) => acc + estimateBase64Bytes(x), 0);
 

@@ -1,4 +1,5 @@
 // src/utils/triagem.js
+import { normalizeCityKey } from "./normalizeCity";
 
 function normalizeText(s = "") {
   return s
@@ -32,36 +33,6 @@ function jaccard(aTokens = [], bTokens = []) {
 
   const uni = A.size + B.size - inter;
   return uni === 0 ? 0 : inter / uni;
-}
-
-function toCityKey(s = "") {
-  return String(s)
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/[/.-]/g, " ")   // separadores viram espaço
-    .replace(/[^\w\s]/g, " ") // pontuação vira espaço
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-const cityKeyAliases = {
-  "jaboatao dos guararapes": "jaboatao",
-  "jaboatao dos guararapes pe": "jaboatao",
-  "jaboatao": "jaboatao",
-  "jaboatao pe": "jaboatao",
-
-  "cidade do recife": "recife",
-  "recife": "recife",
-  "recife pe": "recife",
-
-  "olinda": "olinda",
-  "olinda pe": "olinda",
-};
-
-function normalizeCityKey(s = "") {
-  const k = toCityKey(s);
-  return cityKeyAliases[k] || k;
 }
 
 function distanciaMetros(lat1, lon1, lat2, lon2) {

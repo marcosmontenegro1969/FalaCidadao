@@ -64,7 +64,7 @@ export default function EvidenciasPicker({
         />
       ) : (
         <p className="text-sm text-textmuted">
-          Selecione entre 1 e 3 fotos. (MVP: ainda utiliza galeria; no futuro, será exigido câmera in loco.)
+          Selecione entre 1 e 3 fotos do problema para que o sistema identifique a localização do relato.
         </p>
       )}
     </div>
