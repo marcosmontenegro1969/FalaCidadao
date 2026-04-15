@@ -24,9 +24,9 @@ export default function SugestoesDemandas({
           <div
             key={d.id}
             className={[
-              "rounded-2xl p-4 space-y-3 transition",
+              "rounded-2xl border p-4 space-y-3 transition",
               d.id === demandaAlvoId
-                ? "border-emerald-500/50 bg-emerald-500/10 ring-2 ring-emerald-500/30"
+                ? "border-emerald-400/70 bg-emerald-500/12 ring-2 ring-emerald-400/35 shadow-[0_0_0_1px_rgba(16,185,129,0.18)]"
                 : "border-white/10 bg-white/5",
             ].join(" ")}
           >
@@ -74,6 +74,14 @@ export default function SugestoesDemandas({
                 Não é o mesmo: registrar novo
               </SecondaryActionButton>
             </div>
+            {d.id === demandaAlvoId && (
+              <div className="rounded-xl border border-emerald-400/30 bg-surfaceLight/40 p-3 space-y-1">
+                <h3 className="text-base font-semibold text-textmain">Confirmação rápida</h3>
+                <p className="text-sm text-textsoft leading-relaxed">
+                  Você está confirmando que essa ocorrência continua existindo e merece atenção.
+                </p>
+              </div>
+            )}            
           </div>
         ))}
       </div>

@@ -1,6 +1,6 @@
 // src/pages/Entrar.jsx
-import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 
 const AUTH_KEY = "falaCidadao.auth";
@@ -33,14 +33,23 @@ function FacebookIcon({ className = "h-5 w-5" }) {
 
 export default function Entrar() {
   const navigate = useNavigate();
-  const location = useLocation();
 
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
+  const [nome, setNome] = useState("Usuário Padrão");
+  const [email, setEmail] = useState("usuario@falacidadao.com");
   const [erro, setErro] = useState("");
-
-  const emailOk = useMemo(() => isValidEmail(email.trim()), [email]);
   
+  const nomeRef = useRef(null);
+  const emailRef = useRef(null);
+  const submitRef = useRef(null);
+  const emailOk = useMemo(() => isValidEmail(email.trim()), [email]);
+
+  useEffect(() => {
+    if (nomeRef.current) {
+      nomeRef.current.focus();
+      nomeRef.current.select();
+    }
+  }, []);
+
   const handleClose = () => {
     if (window.history.length > 1) {
       navigate(-1);
@@ -57,11 +66,11 @@ export default function Entrar() {
     const nomeLimpo = nome.trim();
 
     if (!emailLimpo) {
-      setErro("Me diz teu email pra eu liberar a entrada 🙂");
+      setErro("Informe seu email pra liberar sua entrada 🙂");
       return;
     }
     if (!isValidEmail(emailLimpo)) {
-      setErro("Esse email parece inválido. Confere pra mim?");
+      setErro("Esse email parece inválido. Pode informar novamente ?");
       return;
     }
 
@@ -159,8 +168,16 @@ export default function Entrar() {
           <label className="space-y-1 block">
             <span className="text-xs text-textmuted">Seu nome (opcional)</span>
             <input
+              ref={nomeRef}
               value={nome}
               onChange={(e) => setNome(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  emailRef.current?.focus();
+                  emailRef.current?.select();
+                }
+              }}
               placeholder="Ex.: Marcos"
               className="w-full rounded-xl border border-surfaceLight bg-surface px-3 py-2 outline-none focus:ring-2 focus:ring-primary/40"
             />
@@ -169,8 +186,15 @@ export default function Entrar() {
           <label className="space-y-1 block">
             <span className="text-xs text-textmuted">Email</span>
             <input
+              ref={emailRef}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  submitRef.current?.focus();
+                }
+              }}
               placeholder="seuemail@exemplo.com"
               inputMode="email"
               autoComplete="email"
@@ -192,6 +216,7 @@ export default function Entrar() {
           ) : null}
 
           <button
+            ref={submitRef}
             type="submit"
             className="w-full rounded-2xl bg-primary px-4 py-3 font-semibold text-white hover:opacity-95 active:opacity-90 transition"
           >
@@ -206,13 +231,4 @@ export default function Entrar() {
     </section>
   );
 }
-
-
-
-
-
-
-
-
-
 

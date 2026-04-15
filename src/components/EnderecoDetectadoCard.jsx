@@ -15,19 +15,21 @@ export default function EnderecoDetectadoCard({ enderecoDetectado, localRelato }
 
     return (
       <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/10 p-5 space-y-2">
-        <h2 className="text-lg font-semibold">Endereço detectado</h2>
+        <h2 className="text-lg font-semibold">Local detectado</h2>
         <p className="text-sm text-textmuted">{linha}</p>
       </div>
     );
   }
 
-  if (!enderecoDetectado && localRelato) {
+  if (localRelato?.lat != null && localRelato?.lng != null) {
+    const lat = Number(localRelato.lat).toFixed(6);
+    const lng = Number(localRelato.lng).toFixed(6);
+
     return (
-      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 space-y-2">
-        <h2 className="text-lg font-semibold">Endereço não identificado</h2>
+      <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/10 p-5 space-y-2">
+        <h2 className="text-lg font-semibold">Local detectado</h2>
         <p className="text-sm text-textmuted">
-          O GPS foi validado nas fotos, mas não conseguimos obter o endereço (rua/bairro/cidade/UF) agora.
-          Você pode continuar — vamos usar as coordenadas do local.
+          {lat}, {lng}
         </p>
       </div>
     );

@@ -37,6 +37,7 @@ export async function criarDemanda({
   cidadeRelatoKey,
   enderecoDetectado,
   categoria,
+  tempoPercebido,
   localRelato,
   fotosSelecionadas,
   fotosMeta,
@@ -101,6 +102,7 @@ export async function criarDemanda({
       : null,
 
     categoria,
+    tempoPercebido,
     localRelato,
     fotosMeta,
     pontoReferencia: pontoReferencia?.trim() || "",

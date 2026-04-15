@@ -57,7 +57,7 @@ export default function Topo() {
         {/* LOGO + TÍTULO */}
         <div className="flex items-center gap-3 min-w-0 shrink-0">
           <img
-            src="/Logos/Logo_Icon_Mobile_Fala_Cidadao.png"
+            src="/Logos/Logo_Desktop_Fala_Cidadao_Transp_Branco.png"
             alt="Logo Fala Cidadão Mobile"
             className="h-9 w-auto object-contain md:hidden"
           />

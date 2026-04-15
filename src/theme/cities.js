@@ -24,7 +24,7 @@ export const CITY_THEMES = {
     cidadeShort: "—",
 
     // Logo padrão exibida no footer
-    footerLogo: "/Logos/Logo_Icon_Mobile_Fala_Cidadao.png",
+    footerLogo: "/Logos/Logo_Desktop_Fala_Cidadao_Transp_Branco..png",
 
     // Gradiente padrão do footer (fallback visual)
     footerGradient: ["#0f172a", "#111827", "#0f172a"],

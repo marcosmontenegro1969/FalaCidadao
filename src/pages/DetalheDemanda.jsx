@@ -3,11 +3,11 @@
 import { useContext, useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext";
-import { CITY_THEMES } from "../theme/cities";
 import { getDemandas } from "../storage/demandasStorage";
 import ImpactoColetivoBox from "../components/ImpactoColetivoBox";
 import EvidenceGrid from "../components/EvidenceGrid";
 import BackButton from "../components/BackButton";
+import AlertOverlay from "../components/AlertOverlay";
 
 const CURRENT_USER_ID = "cidadao_001";
 
@@ -43,11 +43,65 @@ function tipoBadge(tipo) {
   }
 }
 
-function ModalFoto({ open, fotos, index, onClose, onPrev, onNext }) {
+function ModalFoto({ open, fotos, fotosMeta, index, onClose, onPrev, onNext }) {
   if (!open) return null;
 
   const hasFotos = Array.isArray(fotos) && fotos.length > 0;
   const src = hasFotos ? fotos[index] : null;
+  const takenAt = fotosMeta?.[index]?.takenAt ?? null;
+
+  function formatarTakenAt(takenAt) {
+    if (!takenAt) return null;
+
+    let date = null;
+
+    if (takenAt instanceof Date) {
+      date = takenAt;
+    } else if (typeof takenAt === "number") {
+      date = new Date(takenAt);
+    } else if (typeof takenAt === "string") {
+      let tentativa = new Date(takenAt);
+
+      if (Number.isNaN(tentativa.getTime())) {
+        const exifMatch = takenAt.match(
+          /^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/
+        );
+
+        if (exifMatch) {
+          const [, ano, mes, dia, hora, minuto, segundo = "00"] = exifMatch;
+          tentativa = new Date(
+            Number(ano),
+            Number(mes) - 1,
+            Number(dia),
+            Number(hora),
+            Number(minuto),
+            Number(segundo)
+          );
+        }
+      }
+
+      if (!Number.isNaN(tentativa.getTime())) {
+        date = tentativa;
+      }
+    }
+
+    if (!date || Number.isNaN(date.getTime())) return null;
+
+    const data = new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date);
+
+    const hora = new Intl.DateTimeFormat("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+
+    return `${data} • ${hora}`;
+  }
+
+  const takenAtFormatado = formatarTakenAt(takenAt);
 
   return (
     <div
@@ -75,7 +129,15 @@ function ModalFoto({ open, fotos, index, onClose, onPrev, onNext }) {
           </button>
         </div>
 
-        <div className="rounded-xl overflow-hidden border border-borderSubtle bg-overlay flex items-center justify-center min-h-[240px]">
+        <div className="relative rounded-xl overflow-hidden border border-borderSubtle bg-overlay flex items-center justify-center min-h-[240px]">
+          {takenAtFormatado && (
+            <div className="absolute inset-x-0 top-0 z-10 px-3 py-2 bg-black/65 backdrop-blur-[1px]">
+              <p className="text-xs text-white font-medium text-center">
+                {takenAtFormatado}
+              </p>
+            </div>
+          )}
+
           {src ? (
             <img
               src={src}
@@ -113,6 +175,15 @@ function ModalFoto({ open, fotos, index, onClose, onPrev, onNext }) {
   );
 }
 
+const TEMPO_PERCEBIDO_LABELS = {
+  hoje: "Hoje",
+  alguns_dias: "Há alguns dias",
+  uma_semana: "Há cerca de 1 semana",
+  quinze_dias: "Há cerca de 15 dias",
+  um_mes: "Há cerca de 1 mês",
+  mais_de_um_mes: "Há mais de 1 mês",
+};
+
 export default function DetalheDemanda() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -122,6 +193,7 @@ export default function DetalheDemanda() {
   useContext(ThemeContext);
 
   const [demandasBase, setDemandasBase] = useState([]);
+  const [alertOverlay, setAlertOverlay] = useState(null);
 
   useEffect(() => {
     const load = () => setDemandasBase(getDemandas());
@@ -163,13 +235,31 @@ export default function DetalheDemanda() {
   }
 
   const podeAnexar = demanda.userId === CURRENT_USER_ID;
-  const cidadeExibida = demanda.cidadeRelato || demanda.cidade || "";
-  const estadoExibido = demanda.estadoRelato || "";
+  const ruaExibida =
+    demanda.enderecoDetectado?.rua || demanda.rua || "";
 
-  const cityTheme = CITY_THEMES[cidadeExibida] ?? CITY_THEMES.default;
+  const bairroExibido =
+    demanda.enderecoDetectado?.bairro || demanda.bairro || "";
+
+  const cidadeExibida =
+    demanda.enderecoDetectado?.cidade ||
+    demanda.cidadeRelatoLabel ||
+    demanda.cidadeRelato ||
+    demanda.cidade ||
+    "";
+
+  const estadoExibido =
+    demanda.enderecoDetectado?.estado || demanda.estadoRelato || "";
+
   const cidadeEstadoExibido =
-    [cityTheme.cidadeShort ?? cidadeExibida, estadoExibido].filter(Boolean).join(" / ") || "—";
+    [cidadeExibida, estadoExibido].filter(Boolean).join("/") || "—";
 
+  const localResumoExibido =
+    [ruaExibida, bairroExibido, cidadeEstadoExibido].filter(Boolean).join(" · ") || "—";
+
+  const tempoPercebidoExibido =
+  TEMPO_PERCEBIDO_LABELS[demanda.tempoPercebido] || "";
+  
   const orgaoExibicao = demanda.orgao?.nome
     ? demanda.orgao.nome
     : "Triagem Fala Cidadão (MVP)";
@@ -208,9 +298,11 @@ export default function DetalheDemanda() {
   }
 
   function enviarNovasFotos() {
-    alert(
-      "MVP: nesta etapa, apenas o autor pode anexar evidências. Em breve: envio com validação do moderador."
-    );
+    setAlertOverlay({
+      title: "Envio de novas evidências",
+      message:
+        "Nesta etapa do MVP, apenas o autor pode anexar evidências, e o envio ainda não é publicado automaticamente. Em breve, novas fotos poderão ser enviadas com validação antes da publicação.",
+    });
   }
 
   return (
@@ -235,14 +327,8 @@ export default function DetalheDemanda() {
               >
                 {demanda.status}
               </span>
-
-              <span className="px-2 py-1 rounded-full border border-surfaceLight text-textmuted">
-                Cidade:{" "}
-                <span className="text-textmain">
-                  {cidadeEstadoExibido}
-                </span>
-              </span>
             </div>
+
           </div>
           <BackButton to="/" />
         </div>
@@ -266,12 +352,12 @@ export default function DetalheDemanda() {
 
             {/* Linha 2 — Localização */}
             <div className="text-textmuted text-sm space-y-1">
-              <div>
-                {demanda.bairro || "—"} · {cidadeEstadoExibido}
-              </div>
-              {demanda.rua ? (
+              <div>{localResumoExibido}</div>
+
+              {tempoPercebidoExibido ? (
                 <div className="text-xs text-textsoft">
-                  Endereço: <span className="text-textmain">{demanda.rua}</span>
+                  Percebido:{" "}
+                  <span className="text-textmain">{tempoPercebidoExibido}</span>
                 </div>
               ) : null}
 
@@ -282,7 +368,6 @@ export default function DetalheDemanda() {
                 </div>
               ) : null}
             </div>
-
           </div>
 
           {/* Descrição */}
@@ -321,6 +406,7 @@ export default function DetalheDemanda() {
           {fotosPublicas.length ? (
           <EvidenceGrid
             fotos={fotosPublicas}
+            fotosMeta={demanda.fotosMeta}            
             onClickFoto={openModalAt}
           />
           ) : (
@@ -488,11 +574,18 @@ export default function DetalheDemanda() {
       <ModalFoto
         open={modalOpen}
         fotos={fotosPublicas}
+        fotosMeta={demanda.fotosMeta}
         index={fotoIndex}
         onClose={closeModal}
         onPrev={prevFoto}
         onNext={nextFoto}
       />
+      <AlertOverlay
+        open={!!alertOverlay}
+        title={alertOverlay?.title}
+        message={alertOverlay?.message}
+        onClose={() => setAlertOverlay(null)}
+      />      
     </section>
   );
 }
