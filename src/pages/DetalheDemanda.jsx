@@ -387,20 +387,6 @@ export default function DetalheDemanda() {
                   : "Sem fotos no MVP"}
               </span>
             </div>
-
-            {podeAnexar ? (
-              <button
-                type="button"
-                onClick={enviarNovasFotos}
-                className="px-3 py-2 rounded-lg border border-surfaceLight text-xs text-textmain hover:bg-surfaceLight/40 transition"
-              >
-                Adicionar evidências
-              </button>
-            ) : (
-              <span className="text-[11px] text-textmuted">
-                (MVP) Só o autor pode anexar
-              </span>
-            )}
           </div>
 
           {fotosPublicas.length ? (
