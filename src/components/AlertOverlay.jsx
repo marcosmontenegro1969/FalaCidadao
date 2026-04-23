@@ -1,5 +1,11 @@
 // src/components/AlertOverlay.jsx
-export default function AlertOverlay({ open, title, message, onClose }) {
+export default function AlertOverlay({
+  open,
+  title,
+  message,
+  onClose,
+  actionLabel = "Fechar",
+}) {
   if (!open) return null;
 
   return (
@@ -29,7 +35,7 @@ export default function AlertOverlay({ open, title, message, onClose }) {
             onClick={onClose}
             className="px-4 py-2 rounded-lg border border-white/10 text-sm text-white/90 hover:bg-white/10 transition"
           >
-            Entendi
+            {actionLabel}
           </button>
         </div>
       </div>

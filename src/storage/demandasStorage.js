@@ -81,12 +81,26 @@ function normalizeSeedDemandas(mocks) {
 
 export function seedDemandasIfNeeded() {
   const alreadySeeded = localStorage.getItem(LS_SEEDED_KEY) === "1";
-  if (alreadySeeded) return;
+  const current = safeParse(localStorage.getItem(LS_KEY), null);
+
+  const hasDemandasValidas =
+    Array.isArray(current) && current.length > 0;
+
+  if (alreadySeeded && hasDemandasValidas) return;
 
   const normalized = normalizeSeedDemandas(MOCK_DEMANDAS_EXISTENTES);
 
   localStorage.setItem(LS_KEY, JSON.stringify(normalized));
   localStorage.setItem(LS_SEEDED_KEY, "1");
+}
+
+export function resetDemandasMock() {
+  const normalized = normalizeSeedDemandas(MOCK_DEMANDAS_EXISTENTES);
+
+  localStorage.setItem(LS_KEY, JSON.stringify(normalized));
+  localStorage.setItem(LS_SEEDED_KEY, "1");
+
+  window.dispatchEvent(new Event("falaCidadao:demandas_updated"));
 }
 
 export function getDemandas() {

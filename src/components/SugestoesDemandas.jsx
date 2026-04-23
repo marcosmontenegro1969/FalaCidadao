@@ -70,7 +70,7 @@ export default function SugestoesDemandas({
                 É o mesmo: reforçar
               </SecondaryActionButton>
 
-              <SecondaryActionButton onClick={onRegistrarNovo}>
+              <SecondaryActionButton onClick={() => onRegistrarNovo(d.id)}>
                 Não é o mesmo: registrar novo
               </SecondaryActionButton>
             </div>

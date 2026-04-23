@@ -14,8 +14,8 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       bairro: "Boa Viagem",
       cidade: "Recife",
       estado: "PE",
-      lat: null,
-      lng: null,
+      lat: -8.1266,
+      lng: -34.9007,
     },
 
     // LEGADO (compat temporária)
@@ -28,7 +28,11 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     pontoReferencia: "Próximo ao supermercado ABC",
     status: "Em análise",
     createdAt: "2025-12-12",
-    userId: "cidadao_001",
+
+    userId: "jose@gmail.com",
+    autorId: "jose@gmail.com",
+    autorNome: "JOSE",
+
     fotos: [
       "/mock/DMD-2025-0001-1.jpg",
       "/mock/DMD-2025-0001-2.jpg",
@@ -49,8 +53,8 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       bairro: "Casa Forte",
       cidade: "Recife",
       estado: "PE",
-      lat: null,
-      lng: null,
+      lat: -8.0316,
+      lng: -34.9178,
     },
 
     cidade: "Recife",
@@ -62,7 +66,11 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     pontoReferencia: "Próximo ao ponto de ônibus na Rua Y",
     status: "Em andamento",
     createdAt: "2025-12-11",
-    userId: "cidadao_002",
+
+    userId: "maria@gmail.com",
+    autorId: "maria@gmail.com",
+    autorNome: "MARIA",
+
     fotos: [
       "/mock/DMD-2025-0004-1.jpg",
       "/mock/DMD-2025-0004-2.jpg",
@@ -83,8 +91,8 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       bairro: "Afogados",
       cidade: "Recife",
       estado: "PE",
-      lat: null,
-      lng: null,
+      lat: -8.0778,
+      lng: -34.9189,
     },
 
     cidade: "Recife",
@@ -97,7 +105,11 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     pontoReferencia: "Próximo ao semáforo da Av. Sul Governador Cid Sampaio",
     status: "Em análise",
     createdAt: "2025-12-16",
-    userId: "cidadao_001",
+
+    userId: "flavio@gmail.com",
+    autorId: "flavio@gmail.com",
+    autorNome: "FLAVIO",
+
     fotos: ["/mock/DMD-2025-0005-1.jpg", "/mock/DMD-2025-0005-2.jpg"],
     impacto: { confirmacoes: 8, ultimaConfirmacao: "2025-12-17" },
   },
@@ -114,8 +126,8 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       bairro: "Ibura",
       cidade: "Recife",
       estado: "PE",
-      lat: null,
-      lng: null,
+      lat: -8.1019,
+      lng: -34.9518,
     },
 
     cidade: "Recife",
@@ -128,7 +140,11 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     pontoReferencia: "Entre as ruas A e B no Ibura",
     status: "Em andamento",
     createdAt: "2025-12-14",
-    userId: "cidadao_003",
+
+    userId: "jose@gmail.com",
+    autorId: "jose@gmail.com",
+    autorNome: "JOSE",
+
     fotos: [
       "/mock/DMD-2025-0006-1.jpg",
       "/mock/DMD-2025-0006-2.jpg",
@@ -149,8 +165,8 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       bairro: "Piedade",
       cidade: "Jaboatão dos Guararapes",
       estado: "PE",
-      lat: null,
-      lng: null,
+      lat: -8.1684,
+      lng: -34.9186,
     },
 
     cidade: "Jaboatão dos Guararapes",
@@ -163,7 +179,11 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     pontoReferencia: "Em frente à Escola Municipal Piedade",
     status: "Resolvido",
     createdAt: "2025-12-05",
-    userId: "cidadao_001",
+
+    userId: "maria@gmail.com",
+    autorId: "maria@gmail.com",
+    autorNome: "MARIA",
+
     fotos: ["/mock/DMD-2025-0007-1.jpg", "/mock/DMD-2025-0007-2.jpg"],
     impacto: { confirmacoes: 15, ultimaConfirmacao: "2025-12-10" },
   },

@@ -1,13 +1,23 @@
 // src/pages/Home.jsx
 
-import { useContext, useMemo } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { getDemandas } from "../storage/demandasStorage";
 import { ThemeContext } from "../context/ThemeContext";
 import { CITY_THEMES } from "../theme/cities";
 
 import PulseButton from "../components/PulseButton";
 import SecondaryActionButton from "../components/SecondaryActionButton";
+
+function formatarResumoEngajamento(totalImpulsionamentos, totalAtualizacoes) {
+  const impulsionamentoLabel =
+    totalImpulsionamentos === 1 ? "impulsionamento" : "impulsionamentos";
+
+  const atualizacaoLabel =
+    totalAtualizacoes === 1 ? "atualização" : "atualizações";
+
+  return `${totalImpulsionamentos} ${impulsionamentoLabel} • ${totalAtualizacoes} ${atualizacaoLabel}`;
+}
 
 export default function Home() {
   const navigate = useNavigate();
@@ -23,6 +33,30 @@ export default function Home() {
 
   const theme = CITY_THEMES[city] ?? CITY_THEMES.default;
   const bgUrl = theme.backgroundImage ?? CITY_THEMES.default.backgroundImage;
+  const [demandasHome, setDemandasHome] = useState([]);
+  
+  useEffect(() => {
+    const data = getDemandas();
+    setDemandasHome(data);
+  }, []);
+
+  const demandasResumo = useMemo(() => {
+    const lista = [...demandasHome];
+
+    return lista
+      .filter((d) => {
+        const cidadeDaDemanda = d.cidadeRelato || d.cidade;
+        if (cidadeDaDemanda !== city) return false;
+        if (d.status === "Resolvido") return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      })
+      .slice(0, 2);
+  }, [demandasHome, city]);
 
   return (
     <section
@@ -63,30 +97,57 @@ export default function Home() {
           </div>
 
           <div className="space-y-3">
-            <div className="rounded-xl border border-borderSubtle bg-overlay p-3">
-              <div className="flex justify-between text-xs mb-1">
-                <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/40">
-                  Iluminação
-                </span>
-                <span className="text-textmuted">Boa Viagem</span>
-              </div>
-              <p className="text-textmain">
-                  Poste apagado há 3 dias na Rua X, próximo ao número 120.
-              </p>
-              <p className="text-xs text-textmuted mt-1">Status: Em análise</p>
-            </div>
+            <div className="space-y-3">
+              {demandasResumo.length === 0 ? (
+                <div className="rounded-xl border border-borderSubtle bg-overlay p-3">
+                  <p className="text-textmain">
+                    Ainda não há demandas recentes para esta cidade.
+                  </p>
+                  <p className="text-xs text-textmuted mt-1">
+                    Assim que novos registros aparecerem, eles serão exibidos aqui.
+                  </p>
+                </div>
+              ) : (
+                demandasResumo.map((d) => {
+                  const bairroExibido = d.enderecoDetectado?.bairro || d.bairro || "";
+                  const totalImpulsionamentos = Number(d.totalImpulsionamentos ?? d.impulsionamentos?.length ?? 0);
+                  const totalAtualizacoes = Number(d.atualizacoes?.length ?? 0);
+                  const statusBadge =
+                    d.status === "Em análise"
+                      ? "bg-amber-500/10 text-amber-300 border border-amber-500/40"
+                      : d.status === "Em andamento"
+                      ? "bg-sky-500/10 text-sky-300 border border-sky-500/40"
+                      : d.status === "Resolvido"
+                      ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40"
+                      : "bg-slate-500/10 text-slate-200 border border-slate-500/30";
 
-            <div className="rounded-xl border border-borderSubtle bg-overlay p-3">
-              <div className="flex justify-between text-xs mb-1">
-                <span className="px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/40">
-                  Limpeza urbana
-                </span>
-                <span className="text-textmuted">Jaboatão</span>
-              </div>
-              <p className="text-textmain">
-                Acúmulo de lixo em esquina próxima à parada de ônibus.
-              </p>
-              <p className="text-xs text-textmuted mt-1">Status: Em andamento</p>
+                  return (
+                    <div
+                      key={d.id}
+                      className="rounded-xl border border-borderSubtle bg-overlay p-3"
+                    >
+                      <div className="flex justify-between text-xs mb-1 gap-2">
+                        <span className={`px-2 py-0.5 rounded-full ${statusBadge}`}>
+                          {d.categoria}
+                        </span>
+                        <span className="text-textmuted truncate">
+                          {bairroExibido || (d.cidadeRelatoLabel || d.cidadeRelato || d.cidade)}
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-sm text-textmuted font-medium">
+                        {formatarResumoEngajamento(totalImpulsionamentos, totalAtualizacoes)}
+                      </p>
+                      <p className="text-textmain line-clamp-2">
+                        {d.descricao}
+                      </p>
+
+                      <p className="text-xs text-textmuted mt-1">
+                        Status: {d.status}
+                      </p>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 

@@ -42,6 +42,18 @@ export default function CameraCaptureModal({
     return () => stopStream();
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    if (!videoRef.current) return;
+    if (!streamRef.current) return;
+
+    videoRef.current.srcObject = streamRef.current;
+
+    videoRef.current.play().catch(() => {
+      // fallback silencioso
+    });
+  }, [open, deviceId, loadingCamera]);
+
   async function init() {
     try {
       setLoadingCamera(true);
@@ -96,6 +108,12 @@ export default function CameraCaptureModal({
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+
+        try {
+          await videoRef.current.play();
+        } catch {
+          // fallback silencioso; em alguns navegadores o autoplay pode atrasar
+        }
       }
     } catch (err) {
       console.error(err);
@@ -254,7 +272,7 @@ export default function CameraCaptureModal({
             onClick={() => abrirCamera(deviceId)}
             className="px-3 py-2 rounded-lg border border-white/10 text-sm text-white/90 hover:bg-white/10 transition"
           >
-            Reabrir câmera
+            Tentar novamente
           </button>
 
           <button
@@ -267,18 +285,20 @@ export default function CameraCaptureModal({
           </button>
         </div>
 
-        <div className="rounded-xl overflow-hidden border border-white/10 bg-black min-h-[240px] flex items-center justify-center">
+        <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black min-h-[240px] flex items-center justify-center">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-contain"
+          />
+
           {loadingCamera ? (
-            <p className="text-sm text-white/70">Abrindo câmera...</p>
-          ) : (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-contain"
-            />
-          )}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+              <p className="text-sm text-white/70">Abrindo câmera...</p>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

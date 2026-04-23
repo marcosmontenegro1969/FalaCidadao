@@ -4,12 +4,11 @@ import { useContext, useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext";
 import { getDemandas } from "../storage/demandasStorage";
-import ImpactoColetivoBox from "../components/ImpactoColetivoBox";
+import { normalizarDemandas, impulsionarDemanda } from "../services/demandasActions";
 import EvidenceGrid from "../components/EvidenceGrid";
 import BackButton from "../components/BackButton";
 import AlertOverlay from "../components/AlertOverlay";
-
-const CURRENT_USER_ID = "cidadao_001";
+import AtualizacoesProblemaCard from "../components/AtualizacoesProblemaCard";
 
 function formatDateBR(iso) {
   if (!iso || typeof iso !== "string") return "—";
@@ -175,6 +174,26 @@ function ModalFoto({ open, fotos, fotosMeta, index, onClose, onPrev, onNext }) {
   );
 }
 
+const AUTH_KEY = "falaCidadao.auth";
+
+function getAuthUser() {
+  try {
+    const raw = localStorage.getItem(AUTH_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+
+    return {
+      id: parsed.id || parsed.userId || parsed.email || null,
+      nome: parsed.nome || parsed.name || parsed.displayName || null,
+      email: parsed.email || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 const TEMPO_PERCEBIDO_LABELS = {
   hoje: "Hoje",
   alguns_dias: "Há alguns dias",
@@ -183,6 +202,24 @@ const TEMPO_PERCEBIDO_LABELS = {
   um_mes: "Há cerca de 1 mês",
   mais_de_um_mes: "Há mais de 1 mês",
 };
+
+const DEMANDAS_STORAGE_KEY = "falaCidadao:demandas";
+
+function persistirDemandas(nextDemandas) {
+  localStorage.setItem(DEMANDAS_STORAGE_KEY, JSON.stringify(nextDemandas));
+  window.dispatchEvent(new Event("falaCidadao:demandas_updated"));
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function DetalheDemanda() {
   const navigate = useNavigate();
@@ -194,9 +231,13 @@ export default function DetalheDemanda() {
 
   const [demandasBase, setDemandasBase] = useState([]);
   const [alertOverlay, setAlertOverlay] = useState(null);
+  const [fluxoAtualizacaoAtivo, setFluxoAtualizacaoAtivo] = useState(false);
+  const authUser = getAuthUser();
+  const currentUserId = authUser?.id || null;
+  const isAutenticado = !!currentUserId;
 
   useEffect(() => {
-    const load = () => setDemandasBase(getDemandas());
+    const load = () => setDemandasBase(normalizarDemandas(getDemandas()));
     load();
 
     window.addEventListener("falaCidadao:demandas_updated", load);
@@ -209,13 +250,42 @@ export default function DetalheDemanda() {
     [demandasBase, id]
   );
 
+  const donoDaDemanda = demanda?.autorId || demanda?.userId || null;
+
+  const isAutorOriginal =
+    !!demanda && isAutenticado && donoDaDemanda === currentUserId;
+
+  const jaImpulsionou =
+    !!demanda &&
+    isAutenticado &&
+    Array.isArray(demanda.impulsionamentos) &&
+    demanda.impulsionamentos.some((item) => item?.autorId === currentUserId);
+
+  const podeImpulsionar =
+    !!demanda && isAutenticado && !isAutorOriginal && !jaImpulsionou;
+
+  const podeAtualizarProblema = !!demanda && isAutenticado;
+
   // Impacto da demanda
   const confirmacoes = demanda?.impacto?.confirmacoes ?? 0;
   const ultimaConfirmacao = formatDateBR(demanda?.impacto?.ultimaConfirmacao);
-  
+  const totalImpulsionamentos = demanda?.totalImpulsionamentos ?? 0;
+  const ultimaMovimentacao = formatDateBR(
+    demanda?.ultimaMovimentacaoEm?.slice?.(0, 10) || demanda?.ultimaMovimentacaoEm
+  );
+
+  const resumoMobilizacao =
+    totalImpulsionamentos === 0
+      ? "Nenhum cidadão impulsionou esta demanda até o momento."
+      : totalImpulsionamentos === 1
+      ? "1 cidadão já impulsionou esta demanda."
+      : `${totalImpulsionamentos} cidadãos já impulsionaram esta demanda.`;  
+
   // Modal de foto
   const [modalOpen, setModalOpen] = useState(false);
   const [fotoIndex, setFotoIndex] = useState(0);
+  const [modalFotos, setModalFotos] = useState([]);
+  const [modalFotosMeta, setModalFotosMeta] = useState([]);
 
   if (!demanda) {
     return (
@@ -228,13 +298,13 @@ export default function DetalheDemanda() {
             Não localizamos a demanda{" "}
             <span className="text-textmain">{id}</span>.
           </p>
-          <BackButton to="/" />
+          <BackButton to="/painel" />
         </div>
       </section>
     );
   }
 
-  const podeAnexar = demanda.userId === CURRENT_USER_ID;
+  const podeAnexar = demanda.userId === currentUserId;
   const ruaExibida =
     demanda.enderecoDetectado?.rua || demanda.rua || "";
 
@@ -278,23 +348,53 @@ export default function DetalheDemanda() {
     (src) => typeof src === "string" && src.startsWith("local:")
   );
 
-  function openModalAt(idx) {
+  function abrirModalFotos(fotos, fotosMeta = [], idx = 0) {
+    setModalFotos(Array.isArray(fotos) ? fotos : []);
+    setModalFotosMeta(Array.isArray(fotosMeta) ? fotosMeta : []);
     setFotoIndex(idx);
     setModalOpen(true);
+  }
+
+  function openModalAt(idx) {
+    abrirModalFotos(fotosPublicas, demanda.fotosMeta || [], idx);
+  }
+
+  function openModalAtualizacao(fotos, fotosMeta, idx) {
+    abrirModalFotos(fotos, fotosMeta, idx);
   }
 
   function closeModal() {
     setModalOpen(false);
   }
 
+  function handleImpulsionarDemanda() {
+    if (!demanda?.id) return;
+
+    const result = impulsionarDemanda({ demandaAlvoId: demanda.id });
+
+    if (!result.ok) {
+      setAlertOverlay({
+        title: "Não foi possível impulsionar",
+        message: result.message || "Tente novamente.",
+      });
+      return;
+    }
+
+    setAlertOverlay({
+      title: "Você impulsionou esta demanda",
+      message: "Sua participação foi registrada e esta demanda ganhou mais força no painel.",
+      actionLabel: "Fechar",
+    });
+  }
+  
   function prevFoto() {
-    if (!fotosPublicas.length) return;
-    setFotoIndex((i) => (i - 1 + fotosPublicas.length) % fotosPublicas.length);
+    if (!modalFotos.length) return;
+    setFotoIndex((i) => (i - 1 + modalFotos.length) % modalFotos.length);
   }
 
   function nextFoto() {
-    if (!fotosPublicas.length) return;
-    setFotoIndex((i) => (i + 1) % fotosPublicas.length);
+    if (!modalFotos.length) return;
+    setFotoIndex((i) => (i + 1) % modalFotos.length);
   }
 
   function enviarNovasFotos() {
@@ -305,6 +405,91 @@ export default function DetalheDemanda() {
     });
   }
 
+  function handleAdicionarEvidenciaAtualizacao() {
+    setAlertOverlay({
+      title: "Nova evidência para atualização",
+      message:
+        "Na próxima etapa, você poderá adicionar uma nova evidência para atualizar este problema.",
+      actionLabel: "Fechar",
+    });
+  }  
+
+  async function handleSalvarAtualizacao(payload) {
+    try {
+      if (!demanda?.id) {
+        return {
+          ok: false,
+          message: "Demanda não encontrada para receber a atualização.",
+        };
+      }
+
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const dataHistorico = nowIso.slice(0, 10);
+
+      const atualizacao = {
+        id: `ATU-${Date.now()}`,
+        createdAt: nowIso,
+        autorId: authUser?.email || "anonimo",
+        autorNome: authUser?.nome || "Cidadão",
+        autorEmail: authUser?.email || "",
+        descricao: payload.descricao,
+        pontoReferencia: payload.pontoReferencia,
+        aceiteResponsabilidade: Boolean(payload.aceiteResponsabilidade),
+        fotos: Array.isArray(payload.fotos)
+          ? await Promise.all(
+              payload.fotos.map(async (file) => {
+                if (typeof file === "string") return file;
+                return await fileToDataUrl(file);
+              })
+            )
+          : [],
+        fotosMeta: Array.isArray(payload.fotosMeta) ? payload.fotosMeta : [],
+        enderecoDetectado: payload.enderecoDetectado || null,
+        localRelato: payload.localRelato || null,
+        status: "registrada",
+        origem: "atualizacao_cidada",
+      };
+
+      const nextDemandas = demandasBase.map((item) => {
+        if (item.id !== demanda.id) return item;
+
+        const atualizacoesAtuais = Array.isArray(item.atualizacoes)
+          ? item.atualizacoes
+          : [];
+
+        const historicoAtual = Array.isArray(item.historico)
+          ? item.historico
+          : [];
+
+        return {
+          ...item,
+          atualizacoes: [...atualizacoesAtuais, atualizacao],
+          ultimaMovimentacaoEm: nowIso,
+          historico: [
+            ...historicoAtual,
+            {
+              data: dataHistorico,
+              tipo: "Sistema",
+              evento: "Atualização cidadã registrada.",
+            },
+          ],
+        };
+      });
+
+      setDemandasBase(nextDemandas);
+      localStorage.setItem("falaCidadao:demandas", JSON.stringify(nextDemandas));
+      window.dispatchEvent(new Event("falaCidadao:demandas_updated"));
+
+      return { ok: true };
+    } catch (error) {
+      console.error(error);
+      return {
+        ok: false,
+        message: "Ocorreu um erro ao salvar a atualização.",
+      };
+    }
+  }
   return (
     <section className="flex-1 w-full">
       <div className="w-full max-w-5xl mx-auto px-4 py-10 space-y-6">
@@ -330,7 +515,7 @@ export default function DetalheDemanda() {
             </div>
 
           </div>
-          <BackButton to="/" />
+          <BackButton to="/painel" />
         </div>
 
         {/* Card principal (resumo) */}
@@ -360,13 +545,6 @@ export default function DetalheDemanda() {
                   <span className="text-textmain">{tempoPercebidoExibido}</span>
                 </div>
               ) : null}
-
-              {demanda.pontoReferencia ? (
-                <div className="text-xs text-textsoft">
-                  Ponto de referência:{" "}
-                  <span className="text-textmain">{demanda.pontoReferencia}</span>
-                </div>
-              ) : null}
             </div>
           </div>
 
@@ -374,6 +552,13 @@ export default function DetalheDemanda() {
           <p className="text-textmain leading-relaxed">
             {demanda.descricao}
           </p>
+
+          {demanda.pontoReferencia ? (
+            <div className="text-xs text-textsoft pt-1">
+              Ponto de referência:{" "}
+              <span className="text-textmain">{demanda.pontoReferencia}</span>
+            </div>
+          ) : null}
         </div>
 
         {/* Galeria (evidências) */}
@@ -433,134 +618,189 @@ export default function DetalheDemanda() {
           )}
         </div>
 
-        {/* Impacto Coletivo */}
-        <ImpactoColetivoBox
-          confirmacoes={confirmacoes}
-          ultimaConfirmacao={ultimaConfirmacao}
+        {/* Mobilização cidadã */}
+        <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 p-5 space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <h2 className="text-lg font-semibold">Mobilização cidadã</h2>
+
+            {podeImpulsionar ? (
+              <button
+                type="button"
+                onClick={handleImpulsionarDemanda}
+                className="px-4 py-2 rounded-xl border border-borderSubtle bg-overlay text-sm text-textmain hover:bg-overlayHover transition"
+              >
+                Impulsionar demanda
+              </button>
+            ) : null}
+          </div>
+
+          <div className="rounded-xl border border-borderSubtle bg-overlay p-4 space-y-2">
+            <p className="text-sm text-textmain">{resumoMobilizacao}</p>
+
+            <p className="text-xs text-textmuted">
+              Última movimentação: {ultimaMovimentacao}
+            </p>
+
+            {!isAutenticado ? (
+              <p className="text-xs text-textmuted">
+                Faça login para participar da mobilização desta demanda.
+              </p>
+            ) : isAutorOriginal ? (
+              <p className="text-xs text-textmuted">
+                Você é o autor desta demanda.
+              </p>
+            ) : jaImpulsionou ? (
+              <p className="text-xs text-textmuted">
+                Você já impulsionou esta demanda.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Atualizações do problema */}
+        <AtualizacoesProblemaCard
+          isAutenticado={isAutenticado}
+          podeAtualizarProblema={podeAtualizarProblema}
+          totalAtualizacoes={Array.isArray(demanda.atualizacoes) ? demanda.atualizacoes.length : 0}
+          atualizacoes={Array.isArray(demanda.atualizacoes) ? demanda.atualizacoes : []}
+          localOriginal={{
+            lat: demanda?.localRelato?.lat ?? null,
+            lng: demanda?.localRelato?.lng ?? null,
+          }}
+          onAviso={(payload) => setAlertOverlay(payload)}
+          onSalvarAtualizacao={handleSalvarAtualizacao}
+          onFluxoAtualizacaoChange={setFluxoAtualizacaoAtivo}
+          onAbrirFotoAtualizacao={openModalAtualizacao}
         />
 
         {/* Histórico */}
-        <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 p-5 space-y-3">
-          <h2 className="text-lg font-semibold">Histórico</h2>
-          {Array.isArray(demanda.historico) && demanda.historico.length ? (
-            <div className="space-y-3">
-              {demanda.historico.map((h, idx) => (
-                <div
-                  key={`${h.data}-${idx}`}
-                  className="rounded-xl border border-borderSubtle bg-overlay p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2"
-                >
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="text-textmuted">{formatDateBR(h.data)}</span>
-                    {h.tipo && (
-                      <span
-                        className={`px-2 py-0.5 rounded-full ${tipoBadge(
-                          h.tipo
-                        )}`}
-                      >
-                        {h.tipo === "sistema" ? "Sistema" : "Responsável"}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-textmain">{h.evento}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-textmuted">
-              Sem eventos registrados no histórico ainda.
-            </p>
-          )}
-
-          <p className="text-[11px] text-textmuted">
-            Próximo passo (MVP): quando chegar uma resposta (por e-mail ou registro no sistema), ela entra no
-            histórico e também no bloco de “Resposta do responsável”.
-          </p>
-        </div>
-
-        {/* Responsável pelo atendimento */}
-        <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/15 p-5 space-y-3">
-          <h2 className="text-lg font-semibold">
-            Responsável pelo atendimento
-          </h2>
-
-          <p className="text-sm text-textmain">
-            {orgaoExibicao}
-          </p>
-
-          <p className="text-sm text-textsoft leading-relaxed">
-            Este responsável é o destinatário das informações organizadas pelo Fala Cidadão para análise e eventual manifestação sobre a demanda registrada.
-          </p>
-
-          <p className="text-[11px] text-textmuted">
-            {orgaoDetalhe}
-          </p>
-        </div>
-
-        {/* Resposta do responsável */}
-        <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 p-5 space-y-3">
-          <h2 className="text-lg font-semibold">Resposta do responsável</h2>
-
-          {Array.isArray(demanda.respostaOrgao) && demanda.respostaOrgao.length ? (
-            <>
-              <p className="text-sm text-textmuted">
-                Abaixo estão registradas as manifestações recebidas do responsável pelo atendimento desta demanda.
-              </p>
-
+        {!fluxoAtualizacaoAtivo ? (
+          <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 p-5 space-y-3">
+            <h2 className="text-lg font-semibold">Histórico</h2>
+            {Array.isArray(demanda.historico) && demanda.historico.length ? (
               <div className="space-y-3">
-                {demanda.respostaOrgao.map((r, idx) => (
+                {demanda.historico.map((h, idx) => (
                   <div
-                    key={`${r.data}-${idx}`}
-                    className="rounded-xl border border-borderSubtle bg-overlay p-3 space-y-2"
+                    key={`${h.data}-${idx}`}
+                    className="rounded-xl border border-borderSubtle bg-overlay p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                      <span className="text-textmuted">{r.data}</span>
-
-                      {r.protocolo ? (
-                        <span className="px-2 py-0.5 rounded-full bg-overlay text-textmain border border-borderSubtle">
-                          {r.protocolo}
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full border border-borderSubtle bg-overlay text-textmuted">
-                          Sem protocolo
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-textmuted">{formatDateBR(h.data)}</span>
+                      {h.tipo && (
+                        <span
+                          className={`px-2 py-0.5 rounded-full ${tipoBadge(
+                            h.tipo
+                          )}`}
+                        >
+                          {h.tipo === "sistema" ? "Sistema" : "Responsável"}
                         </span>
                       )}
                     </div>
-
-                    <p className="text-sm text-textmain leading-relaxed">{r.mensagem}</p>
+                    <p className="text-sm text-textmain">{h.evento}</p>
                   </div>
                 ))}
               </div>
-
-              <p className="text-[11px] text-textmuted">
-                As respostas podem conter posicionamentos oficiais, prazos estimados, números de protocolo e atualizações de andamento.
-              </p>
-            </>
-          ) : (
-            <>
+            ) : (
               <p className="text-sm text-textmuted">
-                Aguardando manifestação do responsável pelo atendimento.
+                Sem eventos registrados no histórico ainda.
               </p>
+            )}
 
-              <div className="rounded-xl border border-borderSubtle bg-overlay p-3 space-y-2">
-                <p className="text-sm text-textsoft leading-relaxed">
-                  Quando uma resposta é enviada por e-mail ou registrada pelo sistema, ela pode ser registrada aqui
-                  com data e protocolo para manter transparência e histórico público.
+            <p className="text-[11px] text-textmuted">
+              Próximo passo (MVP): quando chegar uma resposta (por e-mail ou registro no sistema), ela entra no
+              histórico e também no bloco de “Resposta do responsável”.
+            </p>
+          </div>
+        ) : null}
+
+        {/* Responsável pelo atendimento */}
+        {!fluxoAtualizacaoAtivo ? (
+          <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/15 p-5 space-y-3">
+            <h2 className="text-lg font-semibold">
+              Responsável pelo atendimento
+            </h2>
+
+            <p className="text-sm text-textmain">
+              {orgaoExibicao}
+            </p>
+
+            <p className="text-sm text-textsoft leading-relaxed">
+              Este responsável é o destinatário das informações organizadas pelo Fala Cidadão para análise e eventual manifestação sobre a demanda registrada.
+            </p>
+
+            <p className="text-[11px] text-textmuted">
+              {orgaoDetalhe}
+            </p>
+          </div>
+        ) : null}
+
+        {/* Resposta do responsável */}
+        {!fluxoAtualizacaoAtivo ? (
+          <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 p-5 space-y-3">
+            <h2 className="text-lg font-semibold">Resposta do responsável</h2>
+
+            {Array.isArray(demanda.respostaOrgao) && demanda.respostaOrgao.length ? (
+              <>
+                <p className="text-sm text-textmuted">
+                  Abaixo estão registradas as manifestações recebidas do responsável pelo atendimento desta demanda.
                 </p>
+
+                <div className="space-y-3">
+                  {demanda.respostaOrgao.map((r, idx) => (
+                    <div
+                      key={`${r.data}-${idx}`}
+                      className="rounded-xl border border-borderSubtle bg-overlay p-3 space-y-2"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <span className="text-textmuted">{r.data}</span>
+
+                        {r.protocolo ? (
+                          <span className="px-2 py-0.5 rounded-full bg-overlay text-textmain border border-borderSubtle">
+                            {r.protocolo}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full border border-borderSubtle bg-overlay text-textmuted">
+                            Sem protocolo
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-sm text-textmain leading-relaxed">{r.mensagem}</p>
+                    </div>
+                  ))}
+                </div>
 
                 <p className="text-[11px] text-textmuted">
-                  Este MVP ainda não realiza o encaminhamento automático, mas a estrutura já está pronta para registrar e dar transparência às respostas.
+                  As respostas podem conter posicionamentos oficiais, prazos estimados, números de protocolo e atualizações de andamento.
                 </p>
-              </div>
-            </>
-          )}
-        </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-textmuted">
+                  Aguardando manifestação do responsável pelo atendimento.
+                </p>
+
+                <div className="rounded-xl border border-borderSubtle bg-overlay p-3 space-y-2">
+                  <p className="text-sm text-textsoft leading-relaxed">
+                    Quando uma resposta é enviada por e-mail ou registrada pelo sistema, ela pode ser registrada aqui
+                    com data e protocolo para manter transparência e histórico público.
+                  </p>
+
+                  <p className="text-[11px] text-textmuted">
+                    Este MVP ainda não realiza o encaminhamento automático, mas a estrutura já está pronta para registrar e dar transparência às respostas.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        ) : null}
       </div>
 
       {/* Modal de foto */}
       <ModalFoto
         open={modalOpen}
-        fotos={fotosPublicas}
-        fotosMeta={demanda.fotosMeta}
+        fotos={modalFotos}
+        fotosMeta={modalFotosMeta}
         index={fotoIndex}
         onClose={closeModal}
         onPrev={prevFoto}
@@ -570,6 +810,7 @@ export default function DetalheDemanda() {
         open={!!alertOverlay}
         title={alertOverlay?.title}
         message={alertOverlay?.message}
+        actionLabel={alertOverlay?.actionLabel}
         onClose={() => setAlertOverlay(null)}
       />      
     </section>

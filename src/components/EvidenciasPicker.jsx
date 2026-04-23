@@ -10,27 +10,48 @@ export default function EvidenciasPicker({
   onOpenCamera,
   onRemoveFoto,
   enderecoDetectado,
+  title = "Envio de Evidências",
+  emptyMessage = "Selecione até 3 fotos para continuar.",
+  withEnderecoDetectado = true,
+  maxFotos = 3,
+  showTitle = true,
+  showCounter = true,
+  showContainer = true,
+  containerClassName = "",
+  acaoSecundaria = null,
 }) {
-const hasFotos =
-  Array.isArray(fotosPreviewUrls) && fotosPreviewUrls.length > 0;
+  const hasFotos =
+    Array.isArray(fotosPreviewUrls) && fotosPreviewUrls.length > 0;
 
-const linha1Endereco = [enderecoDetectado?.rua, enderecoDetectado?.bairro]
-  .filter(Boolean)
-  .join(" · ");
+  const linha1Endereco = [enderecoDetectado?.rua, enderecoDetectado?.bairro]
+    .filter(Boolean)
+    .join(" · ");
 
-const linha2Endereco = [enderecoDetectado?.cidade, enderecoDetectado?.estado]
-  .filter(Boolean)
-  .join(" · ");
+  const linha2Endereco = [enderecoDetectado?.cidade, enderecoDetectado?.estado]
+    .filter(Boolean)
+    .join(" · ");
 
-return (
-  <div
-    ref={evidenciasRef}
-    className={[
-      "rounded-2xl border p-5 transition",
-      "bg-surfaceLight/15",
-      fotosSelecionadas.length === 0 ? "border-amber-500/40" : "border-borderSubtle",
-    ].join(" ")}
-  >
+  function getHelperText() {
+    const n = fotosSelecionadas.length;
+
+    if (n === 0) return emptyMessage;
+    if (n >= 1 && n <= maxFotos) return `${n} foto(s) selecionada(s).`;
+
+    return `Remova fotos para ficar no máximo de ${maxFotos}.`;
+  }
+
+  const containerClasses = [
+    "rounded-2xl border p-5 transition",
+    "bg-surfaceLight/15",
+    fotosSelecionadas.length === 0
+      ? "border-amber-500/40"
+      : "border-borderSubtle",
+    containerClassName,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const content = (
     <div
       className={[
         "flex flex-col gap-4",
@@ -43,13 +64,21 @@ return (
           hasFotos ? "lg:max-w-[330px]" : "max-w-xl",
         ].join(" ")}
       >
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Envio de Evidências</h2>
+        {(showTitle || showCounter) && (
+          <div className="flex items-center justify-between gap-3">
+            {showTitle ? (
+              <h2 className="text-lg font-semibold">{title}</h2>
+            ) : (
+              <div />
+            )}
 
-          <span className="text-xs text-textmuted whitespace-nowrap">
-            {fotosSelecionadas.length}/3 selecionada(s)
-          </span>
-        </div>
+            {showCounter ? (
+              <span className="text-xs text-textmuted whitespace-nowrap">
+                {fotosSelecionadas.length}/{maxFotos} selecionada(s)
+              </span>
+            ) : null}
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-2">
           <label
@@ -63,7 +92,13 @@ return (
             ].join(" ")}
           >
             Selecionar fotos
-            <input type="file" accept="image/*" multiple onChange={onPickFotos} className="hidden" />
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={onPickFotos}
+              className="hidden"
+            />
           </label>
 
           <button
@@ -79,20 +114,17 @@ return (
           >
             Capturar pela câmera
           </button>
-          
-          <div className="text-sm text-textmuted">
-            {(() => {
-              const n = fotosSelecionadas.length;
-              if (n === 0) return "Selecione até 3 fotos para continuar.";
-              if (n >= 1 && n <= 3) return `${n} foto(s) selecionada(s).`;
-              return "Remova fotos para ficar no máximo de 3.";
-            })()}
-          </div>
+
+          {acaoSecundaria}
+
+          <div className="text-sm text-textmuted">{getHelperText()}</div>
         </div>
 
-        {enderecoDetectado && (
+        {withEnderecoDetectado && enderecoDetectado && (
           <div className="rounded-xl border border-emerald-400/60 bg-emerald-500/10 px-4 py-3">
-            <p className="text-sm font-semibold text-textmain">Local detectado</p>
+            <p className="text-sm font-semibold text-textmain">
+              Local detectado
+            </p>
 
             <div className="mt-1 text-sm leading-relaxed text-textsoft space-y-0.5">
               {linha1Endereco && <p>{linha1Endereco}</p>}
@@ -120,6 +152,19 @@ return (
         </div>
       ) : null}
     </div>
-  </div>
-);
+  );
+
+  if (!showContainer) {
+    return (
+      <div ref={evidenciasRef}>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <div ref={evidenciasRef} className={containerClasses}>
+      {content}
+    </div>
+  );
 }

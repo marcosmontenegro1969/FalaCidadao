@@ -97,6 +97,7 @@ export default function RegistrarProblema() {
 
   const [demandasBase, setDemandasBase] = useState([]);
   const [aceiteResponsabilidade, setAceiteResponsabilidade] = useState(false);
+  const [sugestoesIgnoradas, setSugestoesIgnoradas] = useState([]);
   
   const sugestoes = useMemo(() => {
     if (!triagemAtiva) return [];
@@ -116,6 +117,10 @@ export default function RegistrarProblema() {
 
     return ranked.filter((x) => x.score >= 0.55).slice(0, 3);
   }, [triagemAtiva, cidadeRelatoKey, enderecoDetectado?.bairro, enderecoDetectado?.rua, demandasBase, localRelato?.lat, localRelato?.lng,]);
+
+  const sugestoesVisiveis = useMemo(() => {
+    return sugestoes.filter(({ d }) => !sugestoesIgnoradas.includes(d.id));
+  }, [sugestoes, sugestoesIgnoradas]);
 
   useEffect(() => {
     setAceiteResponsabilidade(false);
@@ -383,6 +388,12 @@ export default function RegistrarProblema() {
     }, 2400);
   }
 
+  function ignorarSugestao(demandaId) {
+    setSugestoesIgnoradas((prev) =>
+      prev.includes(demandaId) ? prev : [...prev, demandaId]
+    );
+  }
+
   function showToast(type, message, ms = 2600) {
     setToast({ type, message });
 
@@ -541,7 +552,10 @@ export default function RegistrarProblema() {
     pontoReferencia.trim().length > 0 &&
     descricaoNovo.trim().length > 0;
     
-  const mostrarPainelSugestoes = triagemAtiva && sugestoes.length > 0 && (acaoEscolhida === null || acaoEscolhida === "reforcar");
+  const mostrarPainelSugestoes =
+  triagemAtiva &&
+  sugestoesVisiveis.length > 0 &&
+  (acaoEscolhida === null || acaoEscolhida === "reforcar");
 
   return (
     <section className="flex-1 w-full">
@@ -590,12 +604,12 @@ export default function RegistrarProblema() {
 
         {mostrarPainelSugestoes && (
           <SugestoesDemandas
-            sugestoes={sugestoes}
+            sugestoes={sugestoesVisiveis}
             demandaAlvoId={demandaAlvoId}
             onVerDetalhes={(id) => navigate(`/painel/${id}`)}
             onAbrirFotos={(demanda, idx) => openFotosExistentes(demanda, idx)}
             onReforcar={(id) => escolherReforcar(id)}
-            onRegistrarNovo={() => escolherNovo()}
+            onRegistrarNovo={(id) => ignorarSugestao(id)}
           />
         )}
 
@@ -656,22 +670,6 @@ export default function RegistrarProblema() {
                 </div>
 
                 <label className="space-y-1 block">
-                  <span className="text-xs text-textmuted">Ponto de referência</span>
-                  <input
-                    value={pontoReferencia}
-                    onChange={(e) => setPontoReferencia(e.target.value)}
-                    placeholder="Ex.: em frente ao mercado X, ao lado da parada Y..."
-                    className={[
-                      "w-full rounded-lg px-3 py-2 text-sm",
-                      "bg-surfaceLight text-textmain border border-borderSubtle",
-                      "outline-none focus:ring-2 focus:ring-primary/40",
-                      "hover:bg-surfaceLight/70 transition",
-                      "placeholder:text-textmuted/70",
-                    ].join(" ")}
-                  />
-                </label>
-
-                <label className="space-y-1 block">
                   <span className="text-xs text-textmuted">Descrição do problema</span>
                   <textarea
                     ref={descricaoInputRef}
@@ -686,6 +684,22 @@ export default function RegistrarProblema() {
                       "hover:bg-surfaceLight/70 transition",
                       "placeholder:text-textmuted/70",
                       "resize-none",
+                    ].join(" ")}
+                  />
+                </label>
+
+                <label className="space-y-1 block">
+                  <span className="text-xs text-textmuted">Ponto de referência</span>
+                  <input
+                    value={pontoReferencia}
+                    onChange={(e) => setPontoReferencia(e.target.value)}
+                    placeholder="Ex.: em frente ao mercado X, ao lado da parada Y..."
+                    className={[
+                      "w-full rounded-lg px-3 py-2 text-sm",
+                      "bg-surfaceLight text-textmain border border-borderSubtle",
+                      "outline-none focus:ring-2 focus:ring-primary/40",
+                      "hover:bg-surfaceLight/70 transition",
+                      "placeholder:text-textmuted/70",
                     ].join(" ")}
                   />
                 </label>

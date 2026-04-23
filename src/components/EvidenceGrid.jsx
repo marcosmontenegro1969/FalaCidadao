@@ -58,6 +58,7 @@ export default function EvidenceGrid({
   fotosMeta,
   onClickFoto,
   renderFooter,
+  className = "",
 }) {
   const listaFotos = Array.isArray(fotos) ? fotos : [];
   const listaMetas = Array.isArray(fotosMeta) ? fotosMeta : [];
@@ -65,7 +66,7 @@ export default function EvidenceGrid({
   if (!listaFotos.length) return null;
 
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className={`grid grid-cols-3 gap-3 ${className}`}>
       {listaFotos.map((src, idx) => {
         const takenAtFormatado = formatarTakenAt(listaMetas[idx]?.takenAt);
 

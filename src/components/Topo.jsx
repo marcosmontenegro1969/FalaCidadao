@@ -11,6 +11,8 @@ const navLinks = [
   { label: "Painel público", to: "/painel" },
 ];
 
+const AUTH_KEY = "falaCidadao.auth";
+
 export default function Topo() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
@@ -26,7 +28,7 @@ export default function Topo() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("falaCidadao.auth");
+    localStorage.removeItem(AUTH_KEY);
     setAuthUser(null);
     closeMobile();
     navigate("/", { replace: true });

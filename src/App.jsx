@@ -10,8 +10,32 @@ import PainelPublico from "./pages/PainelPublico";
 import DetalheDemanda from "./pages/DetalheDemanda";
 import RegistrarProblema from "./pages/RegistrarProblema";
 import Entrar from "./pages/Entrar";
+import { useEffect } from "react";
+import { resetDemandasMock } from "./storage/demandasStorage";
 
 export default function App() {
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
+    function handleKeyDown(e) {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "m") {
+        e.preventDefault();
+
+        const ok = window.confirm(
+          "Deseja restaurar as demandas mock do Fala Cidadão?"
+        );
+
+        if (!ok) return;
+
+        resetDemandasMock();
+        window.alert("Demandas mock restauradas com sucesso.");
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-surface text-textmain">
       <Topo />
