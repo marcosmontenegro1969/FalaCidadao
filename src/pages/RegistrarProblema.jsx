@@ -85,8 +85,8 @@ export default function RegistrarProblema() {
   const [enderecoDetectado, setEnderecoDetectado] = useState(null);
 
   const cidadeRelatoKey = useMemo(() => {
-    return normalizeCityKey(enderecoDetectado?.cidade || "", city);
-  }, [enderecoDetectado?.cidade, city]);
+    return normalizeCityKey(enderecoDetectado?.cidade || "");
+  }, [enderecoDetectado?.cidade]);;
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalFotos, setModalFotos] = useState([]);
@@ -164,11 +164,20 @@ export default function RegistrarProblema() {
     if (acaoEscolhida) return;
     if (fotosSelecionadas.length < 1) return;
 
-    if (sugestoes.length === 0) {
+    // só decide automaticamente depois que a cidade do relato estiver resolvida
+    if (!cidadeRelatoKey) return;
+
+    if (sugestoesVisiveis.length === 0) {
       setAcaoEscolhida("novo");
       setDemandaAlvoId(null);
     }
-  }, [triagemAtiva, sugestoes, acaoEscolhida, fotosSelecionadas.length]);
+  }, [
+    triagemAtiva,
+    acaoEscolhida,
+    fotosSelecionadas.length,
+    cidadeRelatoKey,
+    sugestoesVisiveis.length,
+  ]);
 
   function openFotosExistentes(demanda, idx = 0) {
     const fotos = Array.isArray(demanda.fotos) ? demanda.fotos : [];
@@ -609,7 +618,10 @@ export default function RegistrarProblema() {
             onVerDetalhes={(id) => navigate(`/painel/${id}`)}
             onAbrirFotos={(demanda, idx) => openFotosExistentes(demanda, idx)}
             onReforcar={(id) => escolherReforcar(id)}
-            onRegistrarNovo={(id) => ignorarSugestao(id)}
+            onRegistrarNovo={(id) => {
+              ignorarSugestao(id);
+              escolherNovo();
+            }}
           />
         )}
 
