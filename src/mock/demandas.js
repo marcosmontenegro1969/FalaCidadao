@@ -187,4 +187,99 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     fotos: ["/mock/DMD-2025-0007-1.jpg", "/mock/DMD-2025-0007-2.jpg"],
     impacto: { confirmacoes: 15, ultimaConfirmacao: "2025-12-10" },
   },
+
+  {
+    id: "DMD-2025-0008",
+
+    cidadeEmFoco: "olinda",
+    cidadeRelato: "olinda",
+    cidadeRelatoLabel: "Olinda",
+    estadoRelato: "PE",
+    enderecoDetectado: {
+      rua: "Rua do Sol",
+      bairro: "Carmo",
+      cidade: "Olinda",
+      estado: "PE",
+      lat: -8.0134,
+      lng: -34.8553,
+    },
+    localRelato: {
+      lat: -8.0134,
+      lng: -34.8553,
+      source: "mock",
+    },
+
+    cidade: "Olinda",
+    bairro: "Carmo",
+    rua: "Rua do Sol",
+
+    categoria: "Limpeza urbana",
+    descricao:
+      "Acúmulo de lixo próximo a área de circulação de pedestres, causando mau cheiro e risco à saúde.",
+    pontoReferencia: "Próximo ao Mercado da Ribeira",
+    status: "Em análise",
+    createdAt: "2025-12-18",
+
+    userId: "lucas@gmail.com",
+    autorId: "lucas@gmail.com",
+    autorNome: "LUCAS",
+
+    fotos: [
+      "/mock/DMD-2025-0008-1.jpg",
+      "/mock/DMD-2025-0008-2.jpg",
+    ],
+    impacto: { confirmacoes: 6, ultimaConfirmacao: "2025-12-18" },
+  },  
+  {
+    id: "DMD-2025-0009",
+
+    cidadeEmFoco: "jaboatao",
+    cidadeRelato: "jaboatao",
+    cidadeRelatoLabel: "Jaboatão dos Guararapes",
+    estadoRelato: "PE",
+    enderecoDetectado: {
+      rua: "Rua Professor Mário Ramos",
+      bairro: "Piedade",
+      cidade: "Jaboatão dos Guararapes",
+      estado: "PE",
+      lat: -8.1762,
+      lng: -34.9218,
+    },
+    localRelato: {
+      lat: -8.1762,
+      lng: -34.9218,
+      source: "mock",
+    },
+
+    cidade: "Jaboatão dos Guararapes",
+    bairro: "Piedade",
+    rua: "Rua Professor Mário Ramos",
+
+    categoria: "Segurança",
+    descricao:
+      "Moradores relatam assaltos frequentes neste trecho, especialmente no início da noite, gerando sensação de insegurança para pedestres.",
+    pontoReferencia: "Próximo a uma parada de ônibus em Piedade",
+    status: "Em análise",
+    createdAt: "2025-12-19",
+
+    userId: "maria@gmail.com",
+    autorId: "maria@gmail.com",
+    autorNome: "MARIA",
+
+    fotos: [
+      "/mock/DMD-2025-0009-1.jpg",
+      "/mock/DMD-2025-0009-2.jpg",
+    ],
+
+    impacto: { confirmacoes: 4, ultimaConfirmacao: "2025-12-20" },
+
+    reforcos: [],
+    totalReforcos: 0,
+    ultimoReforcoEm: null,
+
+    atualizacoes: [],
+    totalAtualizacoes: 0,
+
+    ultimaMovimentacaoEm: "2025-12-19T18:30:00.000Z",
+  },  
 ];

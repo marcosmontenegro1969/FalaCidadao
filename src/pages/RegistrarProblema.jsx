@@ -15,7 +15,7 @@ import { CATEGORIAS_DEMANDAS } from "../constants/categoriasDemandas";
 import { criarDemanda, reforcarDemanda } from "../services/demandasActions";
 
 // Storage
-import { getDemandas } from "../storage/demandasStorage";
+import { getDemandas, setDemandas } from "../storage/demandasStorage";
 
 // Hooks
 import { useFotoPreviews } from "../hooks/useFotoPreviews";
@@ -47,6 +47,17 @@ const OPCOES_TEMPO_PERCEBIDO = [
   { value: "um_mes", label: "Há cerca de 1 mês" },
   { value: "mais_de_um_mes", label: "Há mais de 1 mês" },
 ];
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function RegistrarProblema() {
   const navigate = useNavigate();
@@ -360,6 +371,20 @@ export default function RegistrarProblema() {
       }
     }
 
+    if (tipo === "atualizar") {
+      if (!descricaoNovo.trim()) {
+        showToast("error", "Descreva a atualização para continuar.");
+        scrollTo(descricaoRef, descricaoInputRef);
+        return false;
+      }
+
+      if (fotosSelecionadas.length < 1 || fotosSelecionadas.length > 3) {
+        showToast("error", "Envie entre 1 e 3 fotos para atualizar esta demanda.");
+        scrollTo(evidenciasRef, fotosPickRef);
+        return false;
+      }
+    }
+
     // aceite obrigatório em todos os modos
     if (!aceiteResponsabilidade) {
       showToast("error", "Confirme o aviso de responsabilidade para continuar.");
@@ -379,11 +404,21 @@ export default function RegistrarProblema() {
     setEnderecoDetectado(null);*/
   }
 
+  function escolherAtualizar(demandaId) {
+    setAcaoEscolhida("atualizar");
+    setDemandaAlvoId(demandaId);
+  }
+
   function escolherNovo() {
     setAcaoEscolhida("novo");
     setDemandaAlvoId(null);
   }
 
+  function cancelarAposSugestao() {
+    resetTotal();
+    showToast("info", "Registro cancelado.");
+  }
+  
   function confirmarReforco() {
     if (!demandaAlvoId) return;
     if (!validarAntesDeEnviar("reforcar")) return;
@@ -395,6 +430,103 @@ export default function RegistrarProblema() {
     window.setTimeout(() => {
       navigate(`/painel/${demandaAlvoId}`);
     }, 2400);
+  }
+
+  async function confirmarAtualizacao() {
+    if (!demandaAlvoId) return;
+    if (!validarAntesDeEnviar("atualizar")) return;
+    if (!validarIntegridadeGps()) return;
+
+    setIsProcessing(true);
+    setProgress({ done: 0, total: fotosSelecionadas.length, fileName: "" });
+
+    try {
+      showToast("info", "Registrando atualização...");
+
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const today = nowIso.slice(0, 10);
+
+      const fotosBase64 = await Promise.all(
+        fotosSelecionadas.map(async (file) => {
+          if (typeof file === "string") return file;
+          return await fileToDataUrl(file);
+        })
+      );
+
+      const atualizacao = {
+        id: `ATU-${Date.now()}`,
+        createdAt: nowIso,
+        autorId: localStorage.getItem("falaCidadao.auth")
+          ? JSON.parse(localStorage.getItem("falaCidadao.auth"))?.email || "anonimo"
+          : "anonimo",
+        autorNome: localStorage.getItem("falaCidadao.auth")
+          ? JSON.parse(localStorage.getItem("falaCidadao.auth"))?.nome || "Cidadão"
+          : "Cidadão",
+        autorEmail: localStorage.getItem("falaCidadao.auth")
+          ? JSON.parse(localStorage.getItem("falaCidadao.auth"))?.email || ""
+          : "",
+        descricao: descricaoNovo.trim(),
+        pontoReferencia: pontoReferencia.trim(),
+        aceiteResponsabilidade: Boolean(aceiteResponsabilidade),
+        fotos: fotosBase64,
+        fotosMeta: fotosMeta.map((meta) => ({
+          ...meta,
+          takenAt:
+            meta?.takenAt instanceof Date
+              ? meta.takenAt.toISOString()
+              : meta?.takenAt || null,
+        })),
+        enderecoDetectado,
+        localRelato,
+        status: "registrada",
+        origem: "atualizacao_via_triagem",
+      };
+
+      const nextDemandas = getDemandas().map((item) => {
+        if (item.id !== demandaAlvoId) return item;
+
+        const atualizacoesAtuais = Array.isArray(item.atualizacoes)
+          ? item.atualizacoes
+          : [];
+
+        const historicoAtual = Array.isArray(item.historico)
+          ? item.historico
+          : [];
+
+        const nextAtualizacoes = [...atualizacoesAtuais, atualizacao];
+
+        return {
+          ...item,
+          atualizacoes: nextAtualizacoes,
+          totalAtualizacoes: nextAtualizacoes.length,
+          ultimaAtualizacaoEm: nowIso,
+          ultimaMovimentacaoEm: nowIso,
+          historico: [
+            ...historicoAtual,
+            {
+              data: today,
+              tipo: "sistema",
+              evento: "Atualização cidadã registrada.",
+            },
+          ],
+        };
+      });
+
+      setDemandas(nextDemandas);
+
+      showToast("success", "Atualização registrada com sucesso.");
+
+      window.setTimeout(() => {
+        navigate(`/painel/${demandaAlvoId}`);
+      }, 1800);
+    } catch (error) {
+      console.error(error);
+      showToast("error", "Não foi possível registrar a atualização.");
+    } finally {
+      setIsProcessing(false);
+      setProgress({ done: 0, total: 0, fileName: "" });
+    }
   }
 
   function ignorarSugestao(demandaId) {
@@ -553,6 +685,12 @@ export default function RegistrarProblema() {
 
   const podeReforcar = !!demandaAlvoId && aceiteValido;
 
+  const podeAdicionarAtualizacao =
+    !!demandaAlvoId &&
+    evidenciasValidas &&
+    aceiteValido &&
+    descricaoNovo.trim().length > 0;  
+
   const podeRegistrarNovo =
     evidenciasValidas &&
     aceiteValido &&
@@ -562,9 +700,9 @@ export default function RegistrarProblema() {
     descricaoNovo.trim().length > 0;
     
   const mostrarPainelSugestoes =
-  triagemAtiva &&
-  sugestoesVisiveis.length > 0 &&
-  (acaoEscolhida === null || acaoEscolhida === "reforcar");
+    triagemAtiva &&
+    sugestoesVisiveis.length > 0 &&
+    acaoEscolhida === null;
 
   return (
     <section className="flex-1 w-full">
@@ -618,16 +756,64 @@ export default function RegistrarProblema() {
             onVerDetalhes={(id) => navigate(`/painel/${id}`)}
             onAbrirFotos={(demanda, idx) => openFotosExistentes(demanda, idx)}
             onReforcar={(id) => escolherReforcar(id)}
+            onAdicionarAtualizacao={(id) => escolherAtualizar(id)}
             onRegistrarNovo={(id) => {
               ignorarSugestao(id);
               escolherNovo();
             }}
+            onCancelar={cancelarAposSugestao}
           />
         )}
 
         {triagemAtiva && acaoEscolhida && (
           <>
+            {acaoEscolhida === "atualizar" && (
+              <div
+                ref={descricaoRef}
+                className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 backdrop-blur-sm p-5 space-y-3"
+              >
+                <h2 className="text-lg font-semibold">Adicionar atualização à demanda existente</h2>
 
+                <p className="text-sm text-textsoft">
+                  Descreva o que há de novo nesta ocorrência. As fotos já anexadas serão usadas como evidência da atualização.
+                </p>
+
+                <label className="space-y-1 block">
+                  <span className="text-xs text-textmuted">Descrição da atualização</span>
+                  <textarea
+                    ref={descricaoInputRef}
+                    value={descricaoNovo}
+                    onChange={(e) => setDescricaoNovo(e.target.value)}
+                    rows={4}
+                    placeholder="Ex.: O problema continua no local e agora apresenta agravamento..."
+                    className={[
+                      "w-full rounded-lg px-3 py-2 text-sm leading-relaxed",
+                      "bg-surfaceLight text-textmain border border-borderSubtle",
+                      "outline-none focus:ring-2 focus:ring-primary/40",
+                      "hover:bg-surfaceLight/70 transition",
+                      "placeholder:text-textmuted/70",
+                      "resize-none",
+                    ].join(" ")}
+                  />
+                </label>
+
+                <label className="space-y-1 block">
+                  <span className="text-xs text-textmuted">Ponto de referência</span>
+                  <input
+                    value={pontoReferencia}
+                    onChange={(e) => setPontoReferencia(e.target.value)}
+                    placeholder="Ex.: em frente ao mercado X, ao lado da parada Y..."
+                    className={[
+                      "w-full rounded-lg px-3 py-2 text-sm",
+                      "bg-surfaceLight text-textmain border border-borderSubtle",
+                      "outline-none focus:ring-2 focus:ring-primary/40",
+                      "hover:bg-surfaceLight/70 transition",
+                      "placeholder:text-textmuted/70",
+                    ].join(" ")}
+                  />
+                </label>
+              </div>
+            )}
             {acaoEscolhida === "novo" && (
               <div
                 ref={descricaoRef}
@@ -749,6 +935,24 @@ export default function RegistrarProblema() {
                     className="inline-flex items-center gap-2"
                   >
                     Confirmar reforço
+                  </PulseButton>
+                )}
+
+                {acaoEscolhida === "atualizar" && (
+                  <PulseButton
+                    onClick={confirmarAtualizacao}
+                    disabled={!podeAdicionarAtualizacao || isProcessing}
+                    intense={!isProcessing && podeAdicionarAtualizacao}
+                    className="inline-flex items-center gap-2"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <span className="h-3.5 w-3.5 rounded-full border border-current border-t-transparent animate-spin" />
+                        Registrando atualização...
+                      </>
+                    ) : (
+                      "Confirmar atualização"
+                    )}
                   </PulseButton>
                 )}
 

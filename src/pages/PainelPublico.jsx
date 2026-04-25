@@ -48,14 +48,13 @@ function categoryBadgeClass() {
   return "bg-overlay text-textmain border border-borderSubtle";
 }
 
-function formatarResumoEngajamento(totalImpulsionamentos, totalAtualizacoes) {
-  const impulsionamentoLabel =
-    totalImpulsionamentos === 1 ? "impulsionamento" : "impulsionamentos";
+function formatarResumoEngajamento(totalReforcos, totalAtualizacoes) {
+  const reforcoLabel = totalReforcos === 1 ? "reforço" : "reforços";
 
   const atualizacaoLabel =
     totalAtualizacoes === 1 ? "atualização" : "atualizações";
 
-  return `${totalImpulsionamentos} ${impulsionamentoLabel} • ${totalAtualizacoes} ${atualizacaoLabel}`;
+  return `${totalReforcos} ${reforcoLabel} • ${totalAtualizacoes} ${atualizacaoLabel}`;
 }
 
 export default function PainelPublico() {
@@ -444,8 +443,8 @@ export default function PainelPublico() {
           <div className="grid gap-4">
             {demandasExibidas.map((d) => {
               const bairroExibido = d.enderecoDetectado?.bairro || d.bairro || "";
-              const totalImpulsionamentos = Number(d.totalImpulsionamentos ?? d.impulsionamentos?.length ?? 0);
-              const totalAtualizacoes = Number(d.atualizacoes?.length ?? 0);
+              const totalReforcos = Number(d.totalReforcos ?? d.reforcos?.length ?? 0);
+              const totalAtualizacoes = Number(d.totalAtualizacoes ?? d.atualizacoes?.length ?? 0);
               return (
                 <article
                   key={d.id}
@@ -480,7 +479,7 @@ export default function PainelPublico() {
                     </div>
                   </div>
                   <p className="mt-3 text-xs sm:text-sm text-textmuted font-medium">
-                    {formatarResumoEngajamento(totalImpulsionamentos, totalAtualizacoes)}
+                    {formatarResumoEngajamento(totalReforcos, totalAtualizacoes)}
                   </p>
                   <p className="mt-3 text-textmain">{d.descricao}</p>
 

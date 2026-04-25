@@ -39,28 +39,38 @@ export function normalizarDemanda(demanda) {
   const createdAtBase =
     demanda.ultimaMovimentacaoEm ||
     demanda.createdAt ||
-    new Date().toISOString().slice(0, 10);
+    new Date().toISOString();
 
-  const impulsionamentos = Array.isArray(demanda.impulsionamentos)
-    ? demanda.impulsionamentos
-    : [];
+  const reforcos = Array.isArray(demanda.reforcos) ? demanda.reforcos : [];
 
   const atualizacoes = Array.isArray(demanda.atualizacoes)
     ? demanda.atualizacoes
     : [];
 
+  const ultimoReforco = reforcos.length
+    ? reforcos[reforcos.length - 1]
+    : null;
+
   return {
     ...demanda,
-    impulsionamentos,
+
+    reforcos,
+    totalReforcos:
+      typeof demanda.totalReforcos === "number"
+        ? demanda.totalReforcos
+        : reforcos.length,
+
+    ultimoReforcoEm:
+      demanda.ultimoReforcoEm ||
+      ultimoReforco?.createdAt ||
+      null,
+
     atualizacoes,
-    totalImpulsionamentos:
-      typeof demanda.totalImpulsionamentos === "number"
-        ? demanda.totalImpulsionamentos
-        : impulsionamentos.length,
     totalAtualizacoes:
       typeof demanda.totalAtualizacoes === "number"
         ? demanda.totalAtualizacoes
         : atualizacoes.length,
+
     ultimaMovimentacaoEm: demanda.ultimaMovimentacaoEm || createdAtBase,
   };
 }
@@ -70,28 +80,8 @@ export function normalizarDemandas(demandas = []) {
   return demandas.map(normalizarDemanda);
 }
 
-/* Reforça uma demanda, incrementando o contador de confirmações. */
+/* Reforça uma demanda, registrando apoio de outro cidadão. */
 export function reforcarDemanda({ demandaAlvoId }) {
-  const all = getDemandas();
-  const today = new Date().toISOString().slice(0, 10);
-
-  const next = all.map((d) => {
-    if (d.id !== demandaAlvoId) return d;
-
-    const prev = d.impacto?.confirmacoes ?? 0;
-    return {
-      ...d,
-      impacto: {
-        confirmacoes: prev + 1,
-        ultimaConfirmacao: today,
-      },
-    };
-  });
-
-  setDemandas(next);
-}
-/* Impulsiona uma demanda, incrementando o contador de impulsionamentos.  */
-export function impulsionarDemanda({ demandaAlvoId }) {
   const authUser = getAuthUser();
 
   const autorId = authUser?.id || null;
@@ -101,7 +91,7 @@ export function impulsionarDemanda({ demandaAlvoId }) {
     return {
       ok: false,
       reason: "AUTH",
-      message: "Faça login para impulsionar esta demanda.",
+      message: "Faça login para reforçar esta demanda.",
     };
   }
 
@@ -121,45 +111,61 @@ export function impulsionarDemanda({ demandaAlvoId }) {
       demandaAtualizada = {
         ok: false,
         reason: "AUTOR",
-        message: "Você não pode impulsionar a própria demanda.",
+        message: "Você não pode reforçar a própria demanda.",
       };
       return d;
     }
 
-    const jaImpulsionou = Array.isArray(demanda.impulsionamentos)
-      && demanda.impulsionamentos.some((item) => item?.autorId === autorId);
+    const jaReforcou =
+      Array.isArray(demanda.reforcos) &&
+      demanda.reforcos.some((item) => item?.autorId === autorId);
 
-    if (jaImpulsionou) {
+    if (jaReforcou) {
       demandaAtualizada = {
         ok: false,
         reason: "DUPLICADO",
-        message: "Você já impulsionou esta demanda.",
+        message: "Você já reforçou esta demanda.",
       };
       return d;
     }
 
-    const novoImpulsionamento = {
-      id: `imp_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    const novoReforco = {
+      id: `ref_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       demandaId: demanda.id,
       autorId,
       autorNome,
       createdAt: now,
     };
 
-    const impulsionamentos = [...demanda.impulsionamentos, novoImpulsionamento];
-    const totalImpulsionamentos = impulsionamentos.length;
+    const reforcos = [...demanda.reforcos, novoReforco];
+    const totalReforcos = reforcos.length;
 
     const impactoAnterior = demanda.impacto?.confirmacoes ?? 0;
 
+    const historicoAtual = Array.isArray(demanda.historico)
+      ? demanda.historico
+      : [];
+
     const atualizado = {
       ...demanda,
-      impulsionamentos,
-      totalImpulsionamentos,
+      reforcos,
+      totalReforcos,
+      ultimoReforcoEm: now,
       ultimaMovimentacaoEm: now,
+
       impacto: {
         confirmacoes: Math.max(impactoAnterior, 1) + 1,
         ultimaConfirmacao: today,
       },
+
+      historico: [
+        ...historicoAtual,
+        {
+          data: today,
+          tipo: "sistema",
+          evento: "Um cidadão reforçou esta demanda.",
+        },
+      ],
     };
 
     demandaAtualizada = {
@@ -280,10 +286,13 @@ export async function criarDemanda({
       autorNome,
 
       // Novo shape expandido
-      impulsionamentos: [],
+      reforcos: [],
+      totalReforcos: 0,
+      ultimoReforcoEm: null,
+
       atualizacoes: [],
-      totalImpulsionamentos: 0,
       totalAtualizacoes: 0,
+
       ultimaMovimentacaoEm: now,
     })
   );

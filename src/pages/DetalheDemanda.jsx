@@ -4,7 +4,7 @@ import { useContext, useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext";
 import { getDemandas } from "../storage/demandasStorage";
-import { normalizarDemandas, impulsionarDemanda } from "../services/demandasActions";
+import { normalizarDemandas, reforcarDemanda } from "../services/demandasActions";
 import EvidenceGrid from "../components/EvidenceGrid";
 import BackButton from "../components/BackButton";
 import AlertOverlay from "../components/AlertOverlay";
@@ -255,32 +255,35 @@ export default function DetalheDemanda() {
   const isAutorOriginal =
     !!demanda && isAutenticado && donoDaDemanda === currentUserId;
 
-  const jaImpulsionou =
+  const reforcos = Array.isArray(demanda?.reforcos) ? demanda.reforcos : [];
+
+  const jaReforcou =
     !!demanda &&
     isAutenticado &&
-    Array.isArray(demanda.impulsionamentos) &&
-    demanda.impulsionamentos.some((item) => item?.autorId === currentUserId);
+    reforcos.some((item) => item?.autorId === currentUserId);
 
-  const podeImpulsionar =
-    !!demanda && isAutenticado && !isAutorOriginal && !jaImpulsionou;
+  const podeReforcar =
+    !!demanda && isAutenticado && !isAutorOriginal && !jaReforcou;
 
   const podeAtualizarProblema = !!demanda && isAutenticado;
 
-  // Impacto da demanda
-  const confirmacoes = demanda?.impacto?.confirmacoes ?? 0;
-  const ultimaConfirmacao = formatDateBR(demanda?.impacto?.ultimaConfirmacao);
-  const totalImpulsionamentos = demanda?.totalImpulsionamentos ?? 0;
-  const ultimaMovimentacao = formatDateBR(
-    demanda?.ultimaMovimentacaoEm?.slice?.(0, 10) || demanda?.ultimaMovimentacaoEm
+  // Mobilização cidadã
+  const totalReforcos =
+    typeof demanda?.totalReforcos === "number"
+      ? demanda.totalReforcos
+      : reforcos.length;
+
+  const ultimoReforco = formatDateBR(
+    demanda?.ultimoReforcoEm?.slice?.(0, 10) || demanda?.ultimoReforcoEm
   );
 
   const resumoMobilizacao =
-    totalImpulsionamentos === 0
-      ? "Nenhum cidadão impulsionou esta demanda até o momento."
-      : totalImpulsionamentos === 1
-      ? "1 cidadão já impulsionou esta demanda."
-      : `${totalImpulsionamentos} cidadãos já impulsionaram esta demanda.`;  
-
+    totalReforcos === 0
+      ? "Esta demanda ainda não recebeu reforços de outros cidadãos."
+      : totalReforcos === 1
+      ? "1 cidadão já reforçou esta demanda."
+      : `${totalReforcos} cidadãos já reforçaram esta demanda.`;
+  
   // Modal de foto
   const [modalOpen, setModalOpen] = useState(false);
   const [fotoIndex, setFotoIndex] = useState(0);
@@ -367,22 +370,22 @@ export default function DetalheDemanda() {
     setModalOpen(false);
   }
 
-  function handleImpulsionarDemanda() {
+  function handleReforcarDemanda() {
     if (!demanda?.id) return;
 
-    const result = impulsionarDemanda({ demandaAlvoId: demanda.id });
+    const result = reforcarDemanda({ demandaAlvoId: demanda.id });
 
     if (!result.ok) {
       setAlertOverlay({
-        title: "Não foi possível impulsionar",
+        title: "Não foi possível reforçar",
         message: result.message || "Tente novamente.",
       });
       return;
     }
 
     setAlertOverlay({
-      title: "Você impulsionou esta demanda",
-      message: "Sua participação foi registrada e esta demanda ganhou mais força no painel.",
+      title: "Você reforçou esta demanda",
+      message: "Seu reforço foi registrado e esta demanda ganhou mais força no painel.",
       actionLabel: "Fechar",
     });
   }
@@ -622,14 +625,13 @@ export default function DetalheDemanda() {
         <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 p-5 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <h2 className="text-lg font-semibold">Mobilização cidadã</h2>
-
-            {podeImpulsionar ? (
+            {podeReforcar ? (
               <button
                 type="button"
-                onClick={handleImpulsionarDemanda}
+                onClick={handleReforcarDemanda}
                 className="px-4 py-2 rounded-xl border border-borderSubtle bg-overlay text-sm text-textmain hover:bg-overlayHover transition"
               >
-                Impulsionar demanda
+                Reforçar demanda
               </button>
             ) : null}
           </div>
@@ -637,9 +639,15 @@ export default function DetalheDemanda() {
           <div className="rounded-xl border border-borderSubtle bg-overlay p-4 space-y-2">
             <p className="text-sm text-textmain">{resumoMobilizacao}</p>
 
-            <p className="text-xs text-textmuted">
-              Última movimentação: {ultimaMovimentacao}
-            </p>
+            {totalReforcos > 0 ? (
+              <p className="text-xs text-textmuted">
+                Último reforço registrado em: {ultimoReforco}
+              </p>
+            ) : (
+              <p className="text-xs text-textmuted">
+                A mobilização começará quando outro cidadão reforçar esta demanda.
+              </p>
+            )}
 
             {!isAutenticado ? (
               <p className="text-xs text-textmuted">
@@ -649,9 +657,9 @@ export default function DetalheDemanda() {
               <p className="text-xs text-textmuted">
                 Você é o autor desta demanda.
               </p>
-            ) : jaImpulsionou ? (
+            ) : jaReforcou ? (
               <p className="text-xs text-textmuted">
-                Você já impulsionou esta demanda.
+                Você já reforçou esta demanda.
               </p>
             ) : null}
           </div>
@@ -664,8 +672,8 @@ export default function DetalheDemanda() {
           totalAtualizacoes={Array.isArray(demanda.atualizacoes) ? demanda.atualizacoes.length : 0}
           atualizacoes={Array.isArray(demanda.atualizacoes) ? demanda.atualizacoes : []}
           localOriginal={{
-            lat: demanda?.localRelato?.lat ?? null,
-            lng: demanda?.localRelato?.lng ?? null,
+            lat: demanda?.localRelato?.lat ?? demanda?.enderecoDetectado?.lat ?? null,
+            lng: demanda?.localRelato?.lng ?? demanda?.enderecoDetectado?.lng ?? null,
           }}
           onAviso={(payload) => setAlertOverlay(payload)}
           onSalvarAtualizacao={handleSalvarAtualizacao}

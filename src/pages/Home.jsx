@@ -9,14 +9,13 @@ import { CITY_THEMES } from "../theme/cities";
 import PulseButton from "../components/PulseButton";
 import SecondaryActionButton from "../components/SecondaryActionButton";
 
-function formatarResumoEngajamento(totalImpulsionamentos, totalAtualizacoes) {
-  const impulsionamentoLabel =
-    totalImpulsionamentos === 1 ? "impulsionamento" : "impulsionamentos";
+function formatarResumoEngajamento(totalReforcos, totalAtualizacoes) {
+  const reforcoLabel = totalReforcos === 1 ? "reforço" : "reforços";
 
   const atualizacaoLabel =
     totalAtualizacoes === 1 ? "atualização" : "atualizações";
 
-  return `${totalImpulsionamentos} ${impulsionamentoLabel} • ${totalAtualizacoes} ${atualizacaoLabel}`;
+  return `${totalReforcos} ${reforcoLabel} • ${totalAtualizacoes} ${atualizacaoLabel}`;
 }
 
 export default function Home() {
@@ -110,8 +109,8 @@ export default function Home() {
               ) : (
                 demandasResumo.map((d) => {
                   const bairroExibido = d.enderecoDetectado?.bairro || d.bairro || "";
-                  const totalImpulsionamentos = Number(d.totalImpulsionamentos ?? d.impulsionamentos?.length ?? 0);
-                  const totalAtualizacoes = Number(d.atualizacoes?.length ?? 0);
+                  const totalReforcos = Number(d.totalReforcos ?? d.reforcos?.length ?? 0);
+                  const totalAtualizacoes = Number(d.totalAtualizacoes ?? d.atualizacoes?.length ?? 0);
                   const statusBadge =
                     d.status === "Em análise"
                       ? "bg-amber-500/10 text-amber-300 border border-amber-500/40"
@@ -122,10 +121,20 @@ export default function Home() {
                       : "bg-slate-500/10 text-slate-200 border border-slate-500/30";
 
                   return (
-                    <div
-                      key={d.id}
-                      className="rounded-xl border border-borderSubtle bg-overlay p-3"
-                    >
+                      <div
+                        key={d.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => navigate(`/painel/${d.id}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            navigate(`/painel/${d.id}`);
+                          }
+                        }}
+                        className="rounded-xl border border-borderSubtle bg-overlay p-3 cursor-pointer hover:bg-overlayHover hover:border-accent/40 transition"
+                        title="Ver detalhes da demanda"
+                      >
                       <div className="flex justify-between text-xs mb-1 gap-2">
                         <span className={`px-2 py-0.5 rounded-full ${statusBadge}`}>
                           {d.categoria}
@@ -135,7 +144,7 @@ export default function Home() {
                         </span>
                       </div>
                       <p className="text-xs sm:text-sm text-textmuted font-medium">
-                        {formatarResumoEngajamento(totalImpulsionamentos, totalAtualizacoes)}
+                        {formatarResumoEngajamento(totalReforcos, totalAtualizacoes)}
                       </p>
                       <p className="text-textmain line-clamp-2">
                         {d.descricao}

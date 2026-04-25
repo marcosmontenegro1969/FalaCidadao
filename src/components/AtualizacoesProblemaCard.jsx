@@ -28,7 +28,6 @@ export default function AtualizacoesProblemaCard({
       )
     : [];
 
-
   const [flowStep, setFlowStep] = useState(null);
   const [updateEvidenceReady, setUpdateEvidenceReady] = useState(false);
   const [updateDescricao, setUpdateDescricao] = useState("");
@@ -57,6 +56,7 @@ export default function AtualizacoesProblemaCard({
 
   function handleAbrirFluxo() {
     setFlowStep("evidencia");
+    setUpdateCameraModalOpen(true);
     onFluxoAtualizacaoChange?.(true);
   }
 
@@ -153,6 +153,16 @@ export default function AtualizacoesProblemaCard({
 
   function handleOpenUpdateCamera() {
     setUpdateCameraModalOpen(true);
+  }
+
+  function handleCloseUpdateCamera() {
+    setUpdateCameraModalOpen(false);
+
+    const naoTemFotoSelecionada = updateFotosSelecionadas.length === 0;
+
+    if (flowStep === "evidencia" && naoTemFotoSelecionada) {
+      handleCancelarFluxo();
+    }
   }
 
   async function handleUpdateCameraCapture({ file, meta }) {
@@ -366,8 +376,17 @@ export default function AtualizacoesProblemaCard({
     <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 p-5 space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h2 className="text-lg font-semibold">Atualizações do problema</h2>
-      </div>
 
+        {podeAtualizarProblema && flowStep !== "evidencia" ? (
+          <button
+            type="button"
+            onClick={handleAbrirFluxo}
+            className="px-4 py-2 rounded-xl border border-borderSubtle bg-overlay text-sm text-textmain hover:bg-overlayHover transition"
+          >
+            Nova atualização
+          </button>
+        ) : null}
+      </div>
       {!podeAtualizarProblema ? (
         <div className="rounded-xl border border-borderSubtle bg-overlay p-4 space-y-2">
         
@@ -423,75 +442,110 @@ export default function AtualizacoesProblemaCard({
           </div>
 
           {hasAtualizacoes ? (
-            <div className="space-y-3">
+            <div
+              className={[
+                "space-y-3 pr-1",
+                atualizacoesOrdenadas.length > 3
+                  ? "max-h-[420px] overflow-y-auto"
+                  : "",
+              ].join(" ")}
+            >
               {atualizacoesOrdenadas.map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-xl border border-borderSubtle bg-surfaceLight/30 p-3 space-y-2"
+                  className="rounded-xl border border-borderSubtle bg-surfaceLight/30 p-3"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-textmuted">
-                      {item.createdAt
-                        ? new Date(item.createdAt).toLocaleString("pt-BR")
-                        : "Data não informada"}
-                    </span>
-
-                    <span className="px-2 py-0.5 rounded-full border border-borderSubtle bg-overlay text-[11px] text-textmuted">
-                      Atualização cidadã
-                    </span>
-                  </div>
-
-                  <p className="text-sm text-textmain leading-relaxed">
-                    {item.descricao || "Sem descrição informada."}
-                  </p>
-
-                  {item.pontoReferencia ? (
-                    <p className="text-xs text-textmuted">
-                      Ponto de referência:{" "}
-                      <span className="text-textmain">{item.pontoReferencia}</span>
-                    </p>
-                  ) : null}
-
-                  {Array.isArray(item.fotos) && item.fotos.length > 0 ? (
-                    <div className="space-y-2">
-                      <p className="text-xs text-textmuted">Evidências anexadas:</p>
-
-                      {(() => {
-                        const fotosAtualizacao = item.fotos.map((foto) =>
+                  {(() => {
+                    const fotosAtualizacao = Array.isArray(item.fotos)
+                      ? item.fotos.map((foto) =>
                           typeof foto === "string" && foto.startsWith("local:")
                             ? foto.replace("local:", "")
                             : foto
-                        );
+                        )
+                      : [];
 
-                        const fotosMetaAtualizacao = Array.isArray(item.fotosMeta)
-                          ? item.fotosMeta
-                          : [];
+                    const fotosMetaAtualizacao = Array.isArray(item.fotosMeta)
+                      ? item.fotosMeta
+                      : [];
 
-                        return (
-                          <EvidenceGrid
-                            fotos={fotosAtualizacao}
-                            fotosMeta={fotosMetaAtualizacao}
-                            className="grid-cols-2 sm:grid-cols-3"
-                            onClickFoto={
-                              onAbrirFotoAtualizacao
-                                ? (idx) =>
-                                    onAbrirFotoAtualizacao(
-                                      fotosAtualizacao,
-                                      fotosMetaAtualizacao,
-                                      idx
-                                    )
-                                : undefined
-                            }
-                          />
-                        );
-                      })()}
-                    </div>
-                  ) : null}
+                    return (
+                      <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-start">
+                        <div className="space-y-2 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs text-textmuted">
+                              {item.createdAt
+                                ? new Date(item.createdAt).toLocaleString("pt-BR")
+                                : "Data não informada"}
+                            </span>
+
+                            <span className="px-2 py-0.5 rounded-full border border-borderSubtle bg-overlay text-[11px] text-textmuted">
+                              Atualização cidadã
+                            </span>
+                          </div>
+
+                          <p className="text-sm text-textmain leading-relaxed">
+                            {item.descricao || "Sem descrição informada."}
+                          </p>
+
+                          {item.pontoReferencia ? (
+                            <p className="text-xs text-textmuted">
+                              Ponto de referência:{" "}
+                              <span className="text-textmain">
+                                {item.pontoReferencia}
+                              </span>
+                            </p>
+                          ) : null}
+
+                          {fotosAtualizacao.length > 0 ? (
+                            <p className="text-xs text-textmuted">
+                              {fotosAtualizacao.length === 1
+                                ? "1 evidência anexada"
+                                : `${fotosAtualizacao.length} evidências anexadas`}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-textmuted">
+                              Sem evidências anexadas.
+                            </p>
+                          )}
+                        </div>
+
+                        {fotosAtualizacao.length > 0 ? (
+                          <div className="flex flex-wrap md:flex-nowrap gap-2 md:justify-end">
+                            {fotosAtualizacao.map((foto, idx) => (
+                              <button
+                                key={`${item.id}-foto-${idx}`}
+                                type="button"
+                                onClick={
+                                  onAbrirFotoAtualizacao
+                                    ? () =>
+                                        onAbrirFotoAtualizacao(
+                                          fotosAtualizacao,
+                                          fotosMetaAtualizacao,
+                                          idx
+                                        )
+                                    : undefined
+                                }
+                                className="relative h-24 w-24 overflow-hidden rounded-lg border border-borderSubtle bg-overlay hover:opacity-90 transition"
+                                title={`Abrir evidência ${idx + 1}`}
+                              >
+                                <img
+                                  src={foto}
+                                  alt={`Evidência ${idx + 1} da atualização`}
+                                  className="h-full w-full object-cover"
+                                  loading="lazy"
+                                  draggable={false}
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
           ) : null}
-
           {flowStep === "evidencia" ? (
             <div className="space-y-4">
               <EvidenciasPicker
@@ -524,18 +578,7 @@ export default function AtualizacoesProblemaCard({
                 }
               />
             </div>
-          ) : (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={handleAbrirFluxo}
-                className="px-4 py-2 rounded-xl border border-borderSubtle bg-overlay text-sm text-textmain hover:bg-overlayHover transition"
-              >
-                Nova atualização
-              </button>
-            </div>
-          )}
-
+          ) : null}
           {flowStep === "evidencia" && updateEvidenceReady ? (
             <div className="rounded-xl border border-borderSubtle bg-overlay p-4 space-y-4">
               <div className="space-y-1">
@@ -607,7 +650,7 @@ export default function AtualizacoesProblemaCard({
       )}
       <CameraCaptureModal
         open={updateCameraModalOpen}
-        onClose={() => setUpdateCameraModalOpen(false)}
+        onClose={handleCloseUpdateCamera}
         onCapture={handleUpdateCameraCapture}
       />
     </div>
