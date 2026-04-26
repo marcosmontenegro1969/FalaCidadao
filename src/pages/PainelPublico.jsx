@@ -379,7 +379,7 @@ export default function PainelPublico() {
                 className="w-full bg-surface text-textmain border border-textmuted/40 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
               >
                 {CATEGORIAS_DEMANDAS_COM_TODAS.map((c) => (
-                  <option key={c} value={c} className="text-black">
+                  <option key={c} value={c} className="bg-surface text-textmain">
                     {c}
                   </option>
                 ))}
@@ -394,7 +394,7 @@ export default function PainelPublico() {
                 className="w-full bg-surface text-textmain border border-textmuted/40 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
               >
                 {STATUSES.map((s) => (
-                  <option key={s} value={s} className="text-black">
+                  <option key={s} value={s} className="bg-surface text-textmain">
                     {s}
                   </option>
                 ))}
