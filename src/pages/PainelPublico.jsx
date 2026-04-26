@@ -10,7 +10,14 @@ import { CATEGORIAS_DEMANDAS_COM_TODAS } from "../constants/categoriasDemandas";
 import PulseButton from "../components/PulseButton";
 import BackButton from "../components/BackButton";
 
-const STATUSES = ["Todos", "Em análise", "Em andamento", "Resolvido"];
+const STATUSES = [
+  "Todos",
+  "Em análise",
+  "Encaminhada",
+  "Respondida",
+  "Resolvida",
+  "Não solucionada",
+];
 const AUTH_KEY = "falaCidadao.auth";
 
 function getAuthUser() {
@@ -35,10 +42,14 @@ function statusBadgeClass(status) {
   switch (status) {
     case "Em análise":
       return "bg-amber-500/10 text-amber-300 border border-amber-500/40";
-    case "Em andamento":
+    case "Encaminhada":
       return "bg-sky-500/10 text-sky-300 border border-sky-500/40";
-    case "Resolvido":
+    case "Respondida":
+      return "bg-violet-500/10 text-violet-300 border border-violet-500/40";
+    case "Resolvida":
       return "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40";
+    case "Não solucionada":
+      return "bg-rose-500/10 text-rose-300 border border-rose-500/40";
     default:
       return "bg-slate-500/10 text-slate-200 border border-slate-500/30";
   }
@@ -126,20 +137,9 @@ export default function PainelPublico() {
     const q = busca.trim().toLowerCase();
     const cidadeDaDemanda = (d) => d.cidadeRelato || d.cidade;
 
-
-    console.log("CITY DO CONTEXTO:", city);
-    console.log("VIEW:", view);
-    console.log("DEMANDAS BASE:", demandasBase);
-
-
     return demandasBase.filter((d) => {
       if (view === "cidade" && cidadeDaDemanda(d) !== city) return false;
-      if (view === "todas" && d.status === "Resolvido") return false;
-
-
-      console.log("cidade da demanda:", cidadeDaDemanda(d), "city contexto:", city, "id:", d.id);
-
-
+      if (view === "todas" && d.status === "Resolvida") return false;
 
     if (scope === "minhas") {
       if (!isAutenticado) return false;
