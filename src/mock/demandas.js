@@ -64,7 +64,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     categoria: "Outros",
     descricao: "Árvore caída parcialmente obstruindo a calçada.",
     pontoReferencia: "Próximo ao ponto de ônibus na Rua Y",
-    status: "Em andamento",
+    status: "Encaminhada",
     createdAt: "2025-12-11",
 
     userId: "maria@gmail.com",
@@ -138,7 +138,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     descricao:
       "Acúmulo frequente de lixo e entulho em terreno baldio, com mau cheiro e presença de animais.",
     pontoReferencia: "Entre as ruas A e B no Ibura",
-    status: "Em andamento",
+    status: "Encaminhada",
     createdAt: "2025-12-14",
 
     userId: "jose@gmail.com",
@@ -177,7 +177,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     descricao:
       "Faixa de pedestres apagada em frente à escola, dificultando a travessia com segurança.",
     pontoReferencia: "Em frente à Escola Municipal Piedade",
-    status: "Resolvido",
+    status: "Resolvida",
     createdAt: "2025-12-05",
 
     userId: "maria@gmail.com",
