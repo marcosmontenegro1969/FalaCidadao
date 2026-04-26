@@ -1,6 +1,12 @@
 // src/services/demandasActions.js
 
-import { addDemanda, getDemandas, setDemandas } from "../storage/demandasStorage";
+import {
+  addDemanda,
+  adicionarEventoHistorico,
+  getDemandas,
+  setDemandas,
+} from "../storage/demandasStorage";
+
 import {
   MAX_FOTOS_TOTAL_BYTES,
   estimateBase64Bytes,
@@ -142,10 +148,6 @@ export function reforcarDemanda({ demandaAlvoId }) {
 
     const impactoAnterior = demanda.impacto?.confirmacoes ?? 0;
 
-    const historicoAtual = Array.isArray(demanda.historico)
-      ? demanda.historico
-      : [];
-
     const atualizado = {
       ...demanda,
       reforcos,
@@ -158,14 +160,11 @@ export function reforcarDemanda({ demandaAlvoId }) {
         ultimaConfirmacao: today,
       },
 
-      historico: [
-        ...historicoAtual,
-        {
-          data: today,
-          tipo: "sistema",
-          evento: "Um cidadão reforçou esta demanda.",
-        },
-      ],
+      historico: adicionarEventoHistorico(demanda.historico, {
+        data: today,
+        tipo: "cidadao",
+        evento: "Um cidadão reforçou esta demanda.",
+      }),
     };
 
     demandaAtualizada = {
