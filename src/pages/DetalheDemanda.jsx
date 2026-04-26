@@ -3,7 +3,7 @@
 import { useContext, useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext";
-import { getDemandas } from "../storage/demandasStorage";
+import { adicionarEventoHistorico, getDemandas } from "../storage/demandasStorage";
 import { normalizarDemandas, reforcarDemanda } from "../services/demandasActions";
 import EvidenceGrid from "../components/EvidenceGrid";
 import BackButton from "../components/BackButton";
@@ -32,13 +32,30 @@ function statusBadgeClass(status) {
 }
 
 function tipoBadge(tipo) {
-  switch (tipo) {
+  switch (String(tipo || "").toLowerCase()) {
     case "sistema":
       return "bg-slate-500/10 text-slate-200 border border-slate-500/30";
+    case "cidadao":
+      return "bg-cyan-500/10 text-cyan-200 border border-cyan-500/40";
+    case "responsavel":
     case "orgao":
       return "bg-fuchsia-500/10 text-fuchsia-200 border border-fuchsia-500/30";
     default:
       return "bg-slate-500/10 text-slate-200 border border-slate-500/30";
+  }
+}
+
+function tipoLabel(tipo) {
+  switch (String(tipo || "").toLowerCase()) {
+    case "sistema":
+      return "Sistema";
+    case "cidadao":
+      return "Cidadão";
+    case "responsavel":
+    case "orgao":
+      return "Responsável";
+    default:
+      return "Sistema";
   }
 }
 
@@ -461,22 +478,15 @@ export default function DetalheDemanda() {
           ? item.atualizacoes
           : [];
 
-        const historicoAtual = Array.isArray(item.historico)
-          ? item.historico
-          : [];
-
         return {
           ...item,
           atualizacoes: [...atualizacoesAtuais, atualizacao],
           ultimaMovimentacaoEm: nowIso,
-          historico: [
-            ...historicoAtual,
-            {
-              data: dataHistorico,
-              tipo: "Sistema",
-              evento: "Atualização cidadã registrada.",
-            },
-          ],
+          historico: adicionarEventoHistorico(item.historico, {
+            data: dataHistorico,
+            tipo: "cidadao",
+            evento: "Atualização cidadã registrada.",
+          }),
         };
       });
 
@@ -700,7 +710,7 @@ export default function DetalheDemanda() {
                             h.tipo
                           )}`}
                         >
-                          {h.tipo === "sistema" ? "Sistema" : "Responsável"}
+                          {tipoLabel(h.tipo)}
                         </span>
                       )}
                     </div>

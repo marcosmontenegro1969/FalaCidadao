@@ -16,6 +16,45 @@ function isoDateOnly(d = new Date()) {
   return d.toISOString().slice(0, 10);
 }
 
+const TIPOS_HISTORICO_VALIDOS = new Set(["sistema", "cidadao", "responsavel"]);
+
+function normalizeHistoricoTipo(tipo) {
+  const tipoNormalizado = String(tipo || "")
+    .trim()
+    .toLowerCase();
+
+  return TIPOS_HISTORICO_VALIDOS.has(tipoNormalizado)
+    ? tipoNormalizado
+    : "sistema";
+}
+
+export function criarEventoHistorico({
+  data = isoDateOnly(new Date()),
+  tipo = "sistema",
+  evento = "",
+} = {}) {
+  return {
+    data,
+    tipo: normalizeHistoricoTipo(tipo),
+    evento: String(evento || "").trim(),
+  };
+}
+
+export function adicionarEventoHistorico(historicoAtual = [], payload = {}) {
+  const historicoBase = Array.isArray(historicoAtual) ? historicoAtual : [];
+
+  const eventoNormalizado =
+    typeof payload === "string"
+      ? criarEventoHistorico({ evento: payload })
+      : criarEventoHistorico(payload || {});
+
+  if (!eventoNormalizado.evento) {
+    return historicoBase;
+  }
+
+  return [...historicoBase, eventoNormalizado];
+}
+
 // Gera ID no padrão escolhido: DMD-YYYY-MMDD-RAND(4)
 function nextId(date = new Date()) {
   const yyyy = date.getFullYear();
@@ -54,8 +93,16 @@ function normalizeSeedDemandas(mocks) {
       Array.isArray(d.historico) && d.historico.length
         ? d.historico
         : [
-            { data: createdAt, tipo: "sistema", evento: "Demanda registrada." },
-            { data: createdAt, tipo: "sistema", evento: "Encaminhada para triagem Fala Cidadão (MVP)." },
+            criarEventoHistorico({
+              data: createdAt,
+              tipo: "sistema",
+              evento: "Demanda registrada.",
+            }),
+            criarEventoHistorico({
+              data: createdAt,
+              tipo: "sistema",
+              evento: "Encaminhada para triagem Fala Cidadão (MVP).",
+            }),
           ];
 
     const cidadeRelato = d.cidadeRelato ?? d.cidade ?? "default";
@@ -121,8 +168,16 @@ export function addDemanda(partial) {
   const id = generateUniqueId(existingIds, new Date());
 
   const historicoInicial = [
-    { data: createdAt, tipo: "sistema", evento: "Demanda registrada." },
-    { data: createdAt, tipo: "sistema", evento: "Encaminhada para triagem Fala Cidadão (MVP)." },
+    criarEventoHistorico({
+      data: createdAt,
+      tipo: "sistema",
+      evento: "Demanda registrada.",
+    }),
+    criarEventoHistorico({
+      data: createdAt,
+      tipo: "sistema",
+      evento: "Encaminhada para triagem Fala Cidadão (MVP).",
+    }),
   ];
 
   const orgaoDefault = {

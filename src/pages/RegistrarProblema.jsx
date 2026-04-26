@@ -15,7 +15,11 @@ import { CATEGORIAS_DEMANDAS } from "../constants/categoriasDemandas";
 import { criarDemanda, reforcarDemanda } from "../services/demandasActions";
 
 // Storage
-import { getDemandas, setDemandas } from "../storage/demandasStorage";
+import {
+  adicionarEventoHistorico,
+  getDemandas,
+  setDemandas,
+} from "../storage/demandasStorage";
 
 // Hooks
 import { useFotoPreviews } from "../hooks/useFotoPreviews";
@@ -490,10 +494,6 @@ export default function RegistrarProblema() {
           ? item.atualizacoes
           : [];
 
-        const historicoAtual = Array.isArray(item.historico)
-          ? item.historico
-          : [];
-
         const nextAtualizacoes = [...atualizacoesAtuais, atualizacao];
 
         return {
@@ -502,14 +502,11 @@ export default function RegistrarProblema() {
           totalAtualizacoes: nextAtualizacoes.length,
           ultimaAtualizacaoEm: nowIso,
           ultimaMovimentacaoEm: nowIso,
-          historico: [
-            ...historicoAtual,
-            {
-              data: today,
-              tipo: "sistema",
-              evento: "Atualização cidadã registrada.",
-            },
-          ],
+          historico: adicionarEventoHistorico(item.historico, {
+            data: today,
+            tipo: "cidadao",
+            evento: "Atualização cidadã registrada.",
+          }),
         };
       });
 
