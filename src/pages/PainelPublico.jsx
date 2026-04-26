@@ -137,20 +137,9 @@ export default function PainelPublico() {
     const q = busca.trim().toLowerCase();
     const cidadeDaDemanda = (d) => d.cidadeRelato || d.cidade;
 
-
-    console.log("CITY DO CONTEXTO:", city);
-    console.log("VIEW:", view);
-    console.log("DEMANDAS BASE:", demandasBase);
-
-
     return demandasBase.filter((d) => {
       if (view === "cidade" && cidadeDaDemanda(d) !== city) return false;
       if (view === "todas" && d.status === "Resolvida") return false;
-
-
-      console.log("cidade da demanda:", cidadeDaDemanda(d), "city contexto:", city, "id:", d.id);
-
-
 
     if (scope === "minhas") {
       if (!isAutenticado) return false;
