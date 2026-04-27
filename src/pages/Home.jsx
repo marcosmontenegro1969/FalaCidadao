@@ -135,14 +135,21 @@ export default function Home() {
                         className="rounded-xl border border-borderSubtle bg-overlay p-3 cursor-pointer hover:bg-overlayHover hover:border-accent/40 transition"
                         title="Ver detalhes da demanda"
                       >
-                      <div className="flex justify-between text-xs mb-1 gap-2">
-                        <span className={`px-2 py-0.5 rounded-full ${statusBadge}`}>
-                          {d.categoria}
-                        </span>
+                      <div className="flex items-center justify-between text-xs mb-1 gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`px-2 py-0.5 rounded-full ${statusBadge}`}>
+                            {d.categoria}
+                          </span>
+
+                          <span className="text-[11px] text-textmuted truncate">
+                            {d.id}
+                          </span>
+                        </div>
+
                         <span className="text-textmuted truncate">
                           {bairroExibido || (d.cidadeRelatoLabel || d.cidadeRelato || d.cidade)}
                         </span>
-                      </div>
+                      </div>                      
                       <p className="text-xs sm:text-sm text-textmuted font-medium">
                         {formatarResumoEngajamento(totalReforcos, totalAtualizacoes)}
                       </p>

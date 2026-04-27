@@ -151,6 +151,37 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       "/mock/DMD-2025-0006-3.jpg",
     ],
     impacto: { confirmacoes: 21, ultimaConfirmacao: "2025-12-17" },
+    respostaResponsavel: [
+      {
+        data: "2025-12-18",
+        protocolo: "FC-RESP-2025-0006",
+        responsavel: "Secretaria de Serviços Urbanos",
+        tipoResponsavel: "orgao_publico",
+        canal: "simulado",
+        texto:
+          "Informamos que a demanda foi recebida e encaminhada à equipe responsável para análise e programação de atendimento.",
+        statusCidadao: "pendente_avaliacao",
+      },
+    ],
+
+    historico: [
+      {
+        data: "2025-12-14",
+        tipo: "sistema",
+        evento: "Demanda registrada no Fala Cidadão.",
+      },
+      {
+        data: "2025-12-15",
+        tipo: "sistema",
+        evento: "Demanda encaminhada ao responsável pelo atendimento.",
+      },
+      {
+        data: "2025-12-18",
+        tipo: "responsavel",
+        evento:
+          "Resposta do responsável registrada: Secretaria de Serviços Urbanos informou que a demanda foi recebida e encaminhada à equipe responsável para análise e programação de atendimento.",
+      },
+    ],    
   },
 
   {

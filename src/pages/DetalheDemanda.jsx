@@ -249,6 +249,8 @@ export default function DetalheDemanda() {
   const [demandasBase, setDemandasBase] = useState([]);
   const [alertOverlay, setAlertOverlay] = useState(null);
   const [fluxoAtualizacaoAtivo, setFluxoAtualizacaoAtivo] = useState(false);
+  const [contestandoRespostaIdx, setContestandoRespostaIdx] = useState(null);
+  const [textoContestacao, setTextoContestacao] = useState("");  
   const authUser = getAuthUser();
   const currentUserId = authUser?.id || null;
   const isAutenticado = !!currentUserId;
@@ -358,6 +360,39 @@ export default function DetalheDemanda() {
     ? `Contato: ${demanda.orgao.email}`
     : "Sem encaminhamento automático nesta etapa do MVP.";
 
+  const respostasResponsavel = Array.isArray(demanda.respostaResponsavel)
+    ? demanda.respostaResponsavel
+    : Array.isArray(demanda.respostaOrgao)
+    ? demanda.respostaOrgao
+    : [];
+
+  const totalRespostasResponsavel = respostasResponsavel.length;
+
+  const primeiraRespostaContestada =
+    respostasResponsavel[0]?.statusCidadao === "contestada";
+
+  const segundaResposta = respostasResponsavel[1] || null;
+
+  const segundaRespostaAvaliada =
+    segundaResposta?.statusCidadao === "aceita" ||
+    segundaResposta?.statusCidadao === "contestada";
+
+  const podeSimularSegundaResposta =
+    primeiraRespostaContestada && totalRespostasResponsavel === 1;
+
+  const limiteRespostasAtingido = totalRespostasResponsavel >= 2;
+
+  const cicloRespostasEncerrado =
+    limiteRespostasAtingido && segundaRespostaAvaliada;    
+
+  const podeAvaliarResposta = isAutenticado && isAutorOriginal;
+
+  const mensagemBloqueioAvaliacao = !isAutenticado
+    ? "Faça login para aceitar ou contestar esta resposta."
+    : !isAutorOriginal
+    ? "Apenas o autor da demanda pode avaliar esta resposta."
+    : "";
+
   const fotos = Array.isArray(demanda.fotos) ? demanda.fotos : [];
 
   const fotosPublicas = fotos.filter(
@@ -433,6 +468,216 @@ export default function DetalheDemanda() {
       actionLabel: "Fechar",
     });
   }  
+
+  function handleAceitarResposta(respostaIdx) {
+    if (!demanda?.id) return;
+
+    if (!podeAvaliarResposta) {
+      setAlertOverlay({
+        title: "Ação indisponível",
+        message: mensagemBloqueioAvaliacao,
+        actionLabel: "Fechar",
+      });
+      return;
+    }    
+
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const dataHistorico = nowIso.slice(0, 10);
+
+    const nextDemandas = demandasBase.map((item) => {
+      if (item.id !== demanda.id) return item;
+
+      const respostasAtuais = Array.isArray(item.respostaResponsavel)
+        ? item.respostaResponsavel
+        : Array.isArray(item.respostaOrgao)
+        ? item.respostaOrgao
+        : [];
+
+      const respostasAtualizadas = respostasAtuais.map((resposta, idx) => {
+        if (idx !== respostaIdx) return resposta;
+
+        return {
+          ...resposta,
+          statusCidadao: "aceita",
+          avaliadaEm: nowIso,
+        };
+      });
+
+      return {
+        ...item,
+        respostaResponsavel: respostasAtualizadas,
+        ultimaMovimentacaoEm: nowIso,
+        historico: adicionarEventoHistorico(item.historico, {
+          data: dataHistorico,
+          tipo: "cidadao",
+          evento: "Resposta do responsável aceita pelo cidadão.",
+        }),
+      };
+    });
+
+    setContestandoRespostaIdx(null);
+    setTextoContestacao("");
+    setDemandasBase(nextDemandas);
+    persistirDemandas(nextDemandas);
+
+    setAlertOverlay({
+      title: "Resposta aceita",
+      message: "Sua avaliação foi registrada no histórico da demanda.",
+      actionLabel: "Fechar",
+    });
+  }
+
+  function handleEnviarContestacao(respostaIdx) {
+    if (!demanda?.id) return;
+
+    if (!podeAvaliarResposta) {
+      setAlertOverlay({
+        title: "Ação indisponível",
+        message: mensagemBloqueioAvaliacao,
+        actionLabel: "Fechar",
+      });
+      return;
+    }    
+    const texto = textoContestacao.trim();
+
+    if (texto.length < 20) {
+      setAlertOverlay({
+        title: "Contestação muito curta",
+        message:
+          "Explique em pelo menos 20 caracteres por que a resposta não atende à demanda.",
+        actionLabel: "Fechar",
+      });
+      return;
+    }
+
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const dataHistorico = nowIso.slice(0, 10);
+
+    const nextDemandas = demandasBase.map((item) => {
+      if (item.id !== demanda.id) return item;
+
+      const respostasAtuais = Array.isArray(item.respostaResponsavel)
+        ? item.respostaResponsavel
+        : Array.isArray(item.respostaOrgao)
+        ? item.respostaOrgao
+        : [];
+
+      const respostasAtualizadas = respostasAtuais.map((resposta, idx) => {
+        if (idx !== respostaIdx) return resposta;
+
+        return {
+          ...resposta,
+          statusCidadao: "contestada",
+          avaliadaEm: nowIso,
+          contestacao: {
+            texto,
+            data: nowIso,
+            autorId: authUser?.email || currentUserId || "anonimo",
+            autorNome: authUser?.nome || "Cidadão",
+          },
+        };
+      });
+
+      return {
+        ...item,
+        respostaResponsavel: respostasAtualizadas,
+        ultimaMovimentacaoEm: nowIso,
+        historico: adicionarEventoHistorico(item.historico, {
+          data: dataHistorico,
+          tipo: "cidadao",
+          evento: "Resposta do responsável contestada pelo cidadão.",
+        }),
+      };
+    });
+
+    setContestandoRespostaIdx(null);
+    setTextoContestacao("");
+    setDemandasBase(nextDemandas);
+    persistirDemandas(nextDemandas);
+
+    setAlertOverlay({
+      title: "Contestação registrada",
+      message: "Sua contestação foi registrada no histórico da demanda.",
+      actionLabel: "Fechar",
+    });
+  }
+
+  function handleSimularSegundaRespostaResponsavel() {
+    if (!demanda?.id) return;
+
+    if (!podeSimularSegundaResposta) {
+      setAlertOverlay({
+        title: "Ação indisponível",
+        message:
+          "A segunda resposta só pode ser simulada quando a primeira resposta tiver sido contestada.",
+        actionLabel: "Fechar",
+      });
+      return;
+    }
+
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const dataHistorico = nowIso.slice(0, 10);
+
+    const nextDemandas = demandasBase.map((item) => {
+      if (item.id !== demanda.id) return item;
+
+      const respostasAtuais = Array.isArray(item.respostaResponsavel)
+        ? item.respostaResponsavel
+        : Array.isArray(item.respostaOrgao)
+        ? item.respostaOrgao
+        : [];
+
+      if (respostasAtuais.length >= 2) {
+        return item;
+      }
+
+      const primeiraResposta = respostasAtuais[0] || {};
+
+      const segundaResposta = {
+        data: dataHistorico,
+        protocolo: `${primeiraResposta.protocolo || demanda.id}-R2`,
+        responsavel:
+          primeiraResposta.responsavel ||
+          item.orgao?.nome ||
+          "Responsável pelo atendimento",
+        tipoResponsavel:
+          primeiraResposta.tipoResponsavel || "orgao_publico",
+        canal: "simulado",
+        rodada: 2,
+        texto:
+          "Após nova análise da contestação registrada pelo cidadão, informamos que a demanda será reavaliada pela equipe responsável para definição das providências cabíveis.",
+        statusCidadao: "pendente_avaliacao",
+        avaliadaEm: null,
+        contestacao: null,
+      };
+
+      return {
+        ...item,
+        respostaResponsavel: [...respostasAtuais, segundaResposta],
+        ultimaMovimentacaoEm: nowIso,
+        historico: adicionarEventoHistorico(item.historico, {
+          data: dataHistorico,
+          tipo: "responsavel",
+          evento: "Segunda resposta do responsável registrada.",
+        }),
+      };
+    });
+
+    setContestandoRespostaIdx(null);
+    setTextoContestacao("");
+    setDemandasBase(nextDemandas);
+    persistirDemandas(nextDemandas);
+
+    setAlertOverlay({
+      title: "Segunda resposta registrada",
+      message:
+        "A nova resposta simulada do responsável foi adicionada ao histórico da demanda.",
+      actionLabel: "Fechar",
+    });
+  }
 
   async function handleSalvarAtualizacao(payload) {
     try {
@@ -723,11 +968,6 @@ export default function DetalheDemanda() {
                 Sem eventos registrados no histórico ainda.
               </p>
             )}
-
-            <p className="text-[11px] text-textmuted">
-              Próximo passo (MVP): quando chegar uma resposta (por e-mail ou registro no sistema), ela entra no
-              histórico e também no bloco de “Resposta do responsável”.
-            </p>
           </div>
         ) : null}
 
@@ -757,36 +997,200 @@ export default function DetalheDemanda() {
           <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 p-5 space-y-3">
             <h2 className="text-lg font-semibold">Resposta do responsável</h2>
 
-            {Array.isArray(demanda.respostaOrgao) && demanda.respostaOrgao.length ? (
+            {respostasResponsavel.length ? (
               <>
                 <p className="text-sm text-textmuted">
                   Abaixo estão registradas as manifestações recebidas do responsável pelo atendimento desta demanda.
                 </p>
 
                 <div className="space-y-3">
-                  {demanda.respostaOrgao.map((r, idx) => (
+
+                {respostasResponsavel.map((r, idx) => {
+                  const textoResposta = r.mensagem || r.texto || "Resposta não informada.";
+                  const isContestando = contestandoRespostaIdx === idx;
+
+                  return (
                     <div
                       key={`${r.data}-${idx}`}
                       className="rounded-xl border border-borderSubtle bg-overlay p-3 space-y-2"
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                        <span className="text-textmuted">{r.data}</span>
+                      {isContestando ? (
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm font-medium text-textmain">
+                              Contestando resposta do responsável
+                            </p>
+                            <p className="text-xs text-textmuted mt-1">
+                              Revise a resposta recebida e explique por que ela não atende à demanda registrada.
+                            </p>
+                          </div>
 
-                        {r.protocolo ? (
-                          <span className="px-2 py-0.5 rounded-full bg-overlay text-textmain border border-borderSubtle">
-                            {r.protocolo}
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-full border border-borderSubtle bg-overlay text-textmuted">
-                            Sem protocolo
-                          </span>
-                        )}
-                      </div>
+                          <div className="rounded-xl border border-borderSubtle bg-surfaceLight/10 p-3">
+                            <p className="text-xs text-textmuted mb-1">
+                              Resposta recebida:
+                            </p>
+                            <p className="text-sm text-textmain leading-relaxed">
+                              {textoResposta}
+                            </p>
+                          </div>
 
-                      <p className="text-sm text-textmain leading-relaxed">{r.mensagem}</p>
+                          <div className="space-y-2">
+                            <label className="block text-xs text-textmuted">
+                              Explique por que esta resposta não atende à demanda.
+                            </label>
+
+                            <textarea
+                              value={textoContestacao}
+                              onChange={(e) => setTextoContestacao(e.target.value)}
+                              rows={3}
+                              className="w-full rounded-xl border border-borderSubtle bg-surfaceLight/20 px-3 py-2 text-sm text-textmain placeholder:text-textmuted outline-none focus:border-amber-500"
+                              placeholder="Ex.: O problema continua no local, e a resposta não informa prazo ou providência concreta."
+                            />
+
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleEnviarContestacao(idx)}
+                                className="min-w-[88px] px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 text-xs hover:bg-emerald-500/20 transition"
+                              >
+                                Enviar
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setContestandoRespostaIdx(null);
+                                  setTextoContestacao("");
+                                }}
+                                className="min-w-[88px] px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-200 text-xs hover:bg-amber-500/20 transition"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <span className="text-textmuted">
+                              {formatDateBR(r.data)}
+                            </span>
+
+                            {r.protocolo ? (
+                              <span className="px-2 py-0.5 rounded-full bg-overlay text-textmain border border-borderSubtle">
+                                {r.protocolo}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full border border-borderSubtle bg-overlay text-textmuted">
+                                Sem protocolo
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="text-sm text-textmain leading-relaxed">
+                            {textoResposta}
+                          </p>
+
+                          {r.statusCidadao === "aceita" ? (
+                            <div className="pt-2 border-t border-borderSubtle">
+                              <span className="inline-flex px-2 py-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 text-xs">
+                                Resposta aceita pelo cidadão
+                              </span>
+                            </div>
+                          ) : null}
+
+                          {r.statusCidadao === "contestada" ? (
+                            <div className="pt-2 border-t border-borderSubtle space-y-2">
+                              <span className="inline-flex px-2 py-1 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-200 text-xs">
+                                Resposta contestada pelo cidadão
+                              </span>
+
+                              {r.contestacao?.texto ? (
+                                <div className="rounded-xl border border-borderSubtle bg-surfaceLight/10 p-3">
+                                  <p className="text-xs text-textmuted mb-1">
+                                    Motivo da contestação:
+                                  </p>
+                                  <p className="text-sm text-textmain leading-relaxed">
+                                    {r.contestacao.texto}
+                                  </p>
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
+
+                          {r.statusCidadao === "pendente_avaliacao" ? (
+                            <div className="pt-2 border-t border-borderSubtle space-y-2">
+                              {podeAvaliarResposta ? (
+                                <>
+                                  <p className="text-xs text-textmuted">
+                                    Esta resposta atende à demanda registrada?
+                                  </p>
+
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAceitarResposta(idx)}
+                                      className="min-w-[88px] px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 text-xs hover:bg-emerald-500/20 transition"
+                                    >
+                                      Aceitar
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setContestandoRespostaIdx(idx);
+                                        setTextoContestacao("");
+                                      }}
+                                      className="min-w-[88px] px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-200 text-xs hover:bg-amber-500/20 transition"
+                                    >
+                                      Contestar
+                                    </button>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="rounded-lg border border-borderSubtle bg-surfaceLight/10 px-3 py-2">
+                                  <p className="text-xs text-textsoft">
+                                    {mensagemBloqueioAvaliacao}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          ) : null}
+                        </>
+                      )}
                     </div>
-                  ))}
+                  );
+                })}
+
                 </div>
+
+                {podeSimularSegundaResposta ? (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 space-y-2">
+                    <p className="text-xs text-amber-200 leading-relaxed">
+                      A primeira resposta foi contestada pelo cidadão. No MVP, é possível simular uma segunda manifestação do responsável.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={handleSimularSegundaRespostaResponsavel}
+                      className="px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-200 text-xs hover:bg-amber-500/20 transition"
+                    >
+                      Simular nova resposta do responsável
+                    </button>
+                  </div>
+                ) : null}
+
+                {cicloRespostasEncerrado ? (
+                  <div className="rounded-xl border border-borderSubtle bg-surfaceLight/10 p-3 space-y-1">
+                    <p className="text-sm text-textmain font-medium">
+                      Ciclo de respostas encerrado no MVP.
+                    </p>
+
+                    <p className="text-xs text-textmuted leading-relaxed">
+                      Esta demanda já recebeu duas manifestações do responsável. Novas rodadas de resposta não estão disponíveis nesta versão.
+                    </p>
+                  </div>
+                ) : null}                
 
                 <p className="text-[11px] text-textmuted">
                   As respostas podem conter posicionamentos oficiais, prazos estimados, números de protocolo e atualizações de andamento.

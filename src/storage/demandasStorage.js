@@ -82,7 +82,7 @@ function normalizeSeedDemandas(mocks) {
   return mocks.map((d) => {
     // Usa createdAt como referência de data (se existir), senão hoje
     const baseDate = d.createdAt ? new Date(`${d.createdAt}T12:00:00`) : new Date();
-    const id = generateUniqueId(existingIds, baseDate);
+    const id = d.id || generateUniqueId(existingIds, baseDate);
     existingIds.add(id);
 
     // Se não houver histórico, podemos deixar vazio no seed
