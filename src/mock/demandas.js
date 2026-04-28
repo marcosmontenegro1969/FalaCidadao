@@ -39,6 +39,19 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       "/mock/DMD-2025-0001-3.jpg",
     ],
     impacto: { confirmacoes: 35, ultimaConfirmacao: "2025-12-16" },
+    historico: [
+      {
+        data: "2025-12-12",
+        tipo: "sistema",
+        evento: "Demanda registrada no Fala Cidadão.",
+      },
+      {
+        data: "2025-12-13",
+        tipo: "sistema",
+        evento:
+          "Triagem inicial em andamento para identificação do responsável pelo atendimento.",
+      },
+    ],    
   },
 
   {
@@ -77,6 +90,18 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       "/mock/DMD-2025-0004-3.jpg",
     ],
     impacto: { confirmacoes: 12, ultimaConfirmacao: "2025-12-15" },
+    historico: [
+      {
+        data: "2025-12-11",
+        tipo: "sistema",
+        evento: "Demanda registrada no Fala Cidadão.",
+      },
+      {
+        data: "2025-12-12",
+        tipo: "sistema",
+        evento: "Demanda encaminhada ao responsável pelo atendimento.",
+      },
+    ],    
   },
 
   {
@@ -103,15 +128,86 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     descricao:
       "Buraco profundo na faixa da direita, causando desvios bruscos e risco de acidentes.",
     pontoReferencia: "Próximo ao semáforo da Av. Sul Governador Cid Sampaio",
-    status: "Em análise",
+    status: "Resolvida",
     createdAt: "2025-12-16",
-
     userId: "flavio@gmail.com",
     autorId: "flavio@gmail.com",
     autorNome: "FLAVIO",
 
     fotos: ["/mock/DMD-2025-0005-1.jpg", "/mock/DMD-2025-0005-2.jpg"],
     impacto: { confirmacoes: 8, ultimaConfirmacao: "2025-12-17" },
+    respostaResponsavel: [
+      {
+        data: "2025-12-17",
+        protocolo: "FC-RESP-2025-0005",
+        responsavel: "Secretaria de Infraestrutura Urbana",
+        tipoResponsavel: "orgao_publico",
+        canal: "simulado",
+        rodada: 1,
+        texto:
+          "Informamos que a demanda foi recebida e incluída na análise da equipe de manutenção viária.",
+        statusCidadao: "contestada",
+        avaliadaEm: "2025-12-18T10:00:00.000Z",
+        contestacao: {
+          texto:
+            "O buraco continua oferecendo risco e a resposta não informa prazo concreto para atendimento.",
+          data: "2025-12-18T10:00:00.000Z",
+          autorId: "flavio@gmail.com",
+          autorNome: "FLAVIO",
+        },
+      },
+      {
+        data: "2025-12-19",
+        protocolo: "FC-RESP-2025-0005-R2",
+        responsavel: "Secretaria de Infraestrutura Urbana",
+        tipoResponsavel: "orgao_publico",
+        canal: "simulado",
+        rodada: 2,
+        texto:
+          "Após reavaliação, informamos que a equipe operacional realizou o reparo emergencial no trecho indicado.",
+        statusCidadao: "aceita",
+        avaliadaEm: "2025-12-20T09:30:00.000Z",
+        contestacao: null,
+      },
+    ],
+
+    historico: [
+      {
+        data: "2025-12-16",
+        tipo: "sistema",
+        evento: "Demanda registrada no Fala Cidadão.",
+      },
+      {
+        data: "2025-12-17",
+        tipo: "sistema",
+        evento: "Demanda encaminhada ao responsável pelo atendimento.",
+      },
+      {
+        data: "2025-12-17",
+        tipo: "responsavel",
+        evento: "Primeira resposta do responsável registrada.",
+      },
+      {
+        data: "2025-12-18",
+        tipo: "cidadao",
+        evento: "Resposta do responsável contestada pelo cidadão.",
+      },
+      {
+        data: "2025-12-19",
+        tipo: "responsavel",
+        evento: "Segunda resposta do responsável registrada.",
+      },
+      {
+        data: "2025-12-20",
+        tipo: "cidadao",
+        evento: "Resposta do responsável aceita pelo cidadão.",
+      },
+      {
+        data: "2025-12-20",
+        tipo: "sistema",
+        evento: "Demanda marcada como resolvida no Fala Cidadão.",
+      },
+    ],    
   },
 
   {
@@ -217,6 +313,84 @@ export const MOCK_DEMANDAS_EXISTENTES = [
 
     fotos: ["/mock/DMD-2025-0007-1.jpg", "/mock/DMD-2025-0007-2.jpg"],
     impacto: { confirmacoes: 15, ultimaConfirmacao: "2025-12-10" },
+    respostaResponsavel: [
+      {
+        data: "2025-12-06",
+        protocolo: "FC-RESP-2025-0007",
+        responsavel: "Secretaria de Mobilidade Urbana",
+        tipoResponsavel: "orgao_publico",
+        canal: "simulado",
+        rodada: 1,
+        texto:
+          "Informamos que a solicitação foi recebida e encaminhada para avaliação da equipe de sinalização viária.",
+        statusCidadao: "contestada",
+        avaliadaEm: "2025-12-07T11:00:00.000Z",
+        contestacao: {
+          texto:
+            "A sinalização continua apagada e a resposta não informa prazo para pintura ou vistoria.",
+          data: "2025-12-07T11:00:00.000Z",
+          autorId: "maria@gmail.com",
+          autorNome: "MARIA",
+        },
+      },
+      {
+        data: "2025-12-09",
+        protocolo: "FC-RESP-2025-0007-R2",
+        responsavel: "Secretaria de Mobilidade Urbana",
+        tipoResponsavel: "orgao_publico",
+        canal: "simulado",
+        rodada: 2,
+        texto:
+          "Após nova análise, informamos que a demanda foi registrada para execução conforme disponibilidade da equipe operacional.",
+        statusCidadao: "contestada",
+        avaliadaEm: "2025-12-10T15:20:00.000Z",
+        contestacao: {
+          texto:
+            "A segunda resposta ainda não confirma a execução nem apresenta prazo objetivo para resolver o problema.",
+          data: "2025-12-10T15:20:00.000Z",
+          autorId: "maria@gmail.com",
+          autorNome: "MARIA",
+        },
+      },
+    ],
+    historico: [
+      {
+        data: "2025-12-05",
+        tipo: "sistema",
+        evento: "Demanda registrada no Fala Cidadão.",
+      },
+      {
+        data: "2025-12-06",
+        tipo: "sistema",
+        evento: "Demanda encaminhada ao responsável pelo atendimento.",
+      },
+      {
+        data: "2025-12-06",
+        tipo: "responsavel",
+        evento: "Primeira resposta do responsável registrada.",
+      },
+      {
+        data: "2025-12-07",
+        tipo: "cidadao",
+        evento: "Resposta do responsável contestada pelo cidadão.",
+      },
+      {
+        data: "2025-12-09",
+        tipo: "responsavel",
+        evento: "Segunda resposta do responsável registrada.",
+      },
+      {
+        data: "2025-12-10",
+        tipo: "cidadao",
+        evento: "Segunda resposta do responsável contestada pelo cidadão.",
+      },
+      {
+        data: "2025-12-10",
+        tipo: "sistema",
+        evento:
+          "Ciclo de respostas encerrado no MVP após duas manifestações do responsável.",
+      },
+    ],    
   },
 
   {
@@ -260,6 +434,19 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       "/mock/DMD-2025-0008-2.jpg",
     ],
     impacto: { confirmacoes: 6, ultimaConfirmacao: "2025-12-18" },
+    historico: [
+      {
+        data: "2025-12-18",
+        tipo: "sistema",
+        evento: "Demanda registrada no Fala Cidadão.",
+      },
+      {
+        data: "2025-12-19",
+        tipo: "sistema",
+        evento:
+          "Triagem inicial em andamento para identificação do responsável pelo atendimento.",
+      },
+    ],    
   },  
   {
     id: "DMD-2025-0009",
@@ -312,5 +499,18 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     totalAtualizacoes: 0,
 
     ultimaMovimentacaoEm: "2025-12-19T18:30:00.000Z",
+    historico: [
+      {
+        data: "2025-12-19",
+        tipo: "sistema",
+        evento: "Demanda registrada no Fala Cidadão.",
+      },
+      {
+        data: "2025-12-20",
+        tipo: "sistema",
+        evento:
+          "Triagem inicial em andamento para identificação do responsável pelo atendimento.",
+      },
+    ],    
   },  
 ];
