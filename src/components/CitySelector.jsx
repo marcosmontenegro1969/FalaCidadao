@@ -1,15 +1,25 @@
 // src/components/CitySelector.jsx
 
 import { useContext } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext";
 
 // Componente para seleção de cidade
 export default function CitySelector({ onChangeComplete }) {
   const { city, changeCity } = useContext(ThemeContext);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Função para lidar com mudança de cidade
   function handleChange(e) {
-    changeCity(e.target.value);
+    const novaCidade = e.target.value;
+
+    changeCity(novaCidade);
+
+    if (location.pathname.startsWith("/painel/")) {
+      navigate("/painel");
+    }
+
     if (onChangeComplete) onChangeComplete();
   }
 
@@ -30,7 +40,9 @@ export default function CitySelector({ onChangeComplete }) {
       "
     >
       {/* Placeholder: não selecionável */}
-      <option value="default" disabled>Selecione a cidade</option>
+      <option value="default" disabled>
+        Selecione a cidade
+      </option>
       <option value="recife">Recife/PE</option>
       <option value="jaboatao">Jaboatão dos Guararapes/PE</option>
       <option value="olinda">Olinda/PE</option>

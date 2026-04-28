@@ -18,6 +18,21 @@ function formatarResumoEngajamento(totalReforcos, totalAtualizacoes) {
   return `${totalReforcos} ${reforcoLabel} • ${totalAtualizacoes} ${atualizacaoLabel}`;
 }
 
+function statusBadgeClass(status) {
+  switch (status) {
+    case "Em análise":
+      return "bg-amber-500/10 text-amber-300 border border-amber-500/40";
+    case "Encaminhada":
+      return "bg-sky-500/10 text-sky-300 border border-sky-500/40";
+    case "Resolvida":
+      return "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40";
+    case "Encerrada":
+      return "bg-violet-500/10 text-violet-300 border border-violet-500/40";
+    default:
+      return "bg-slate-500/10 text-slate-200 border border-slate-500/30";
+  }
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const { city } = useContext(ThemeContext);
@@ -111,14 +126,7 @@ export default function Home() {
                   const bairroExibido = d.enderecoDetectado?.bairro || d.bairro || "";
                   const totalReforcos = Number(d.totalReforcos ?? d.reforcos?.length ?? 0);
                   const totalAtualizacoes = Number(d.totalAtualizacoes ?? d.atualizacoes?.length ?? 0);
-                  const statusBadge =
-                    d.status === "Em análise"
-                      ? "bg-amber-500/10 text-amber-300 border border-amber-500/40"
-                      : d.status === "Em andamento"
-                      ? "bg-sky-500/10 text-sky-300 border border-sky-500/40"
-                      : d.status === "Resolvido"
-                      ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40"
-                      : "bg-slate-500/10 text-slate-200 border border-slate-500/30";
+                  const statusBadge = statusBadgeClass(d.status);
 
                   return (
                       <div
@@ -137,7 +145,7 @@ export default function Home() {
                       >
                       <div className="flex items-center justify-between text-xs mb-1 gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className={`px-2 py-0.5 rounded-full ${statusBadge}`}>
+                          <span className="text-xs text-textsoft truncate">
                             {d.categoria}
                           </span>
 
@@ -145,6 +153,10 @@ export default function Home() {
                             {d.id}
                           </span>
                         </div>
+
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${statusBadge}`}>
+                          {d.status}
+                        </span>
 
                         <span className="text-textmuted truncate">
                           {bairroExibido || (d.cidadeRelatoLabel || d.cidadeRelato || d.cidade)}
@@ -155,10 +167,6 @@ export default function Home() {
                       </p>
                       <p className="text-textmain line-clamp-2">
                         {d.descricao}
-                      </p>
-
-                      <p className="text-xs text-textmuted mt-1">
-                        Status: {d.status}
                       </p>
                     </div>
                   );

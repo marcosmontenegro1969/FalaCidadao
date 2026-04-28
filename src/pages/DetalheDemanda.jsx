@@ -22,10 +22,12 @@ function statusBadgeClass(status) {
   switch (status) {
     case "Em análise":
       return "bg-amber-500/10 text-amber-300 border border-amber-500/40";
-    case "Em andamento":
+    case "Encaminhada":
       return "bg-sky-500/10 text-sky-300 border border-sky-500/40";
-    case "Resolvido":
+    case "Resolvida":
       return "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40";
+    case "Encerrada":
+      return "bg-violet-500/10 text-violet-300 border border-violet-500/40";
     default:
       return "bg-slate-500/10 text-slate-200 border border-slate-500/30";
   }

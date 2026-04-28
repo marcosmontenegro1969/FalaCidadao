@@ -44,12 +44,10 @@ function statusBadgeClass(status) {
       return "bg-amber-500/10 text-amber-300 border border-amber-500/40";
     case "Encaminhada":
       return "bg-sky-500/10 text-sky-300 border border-sky-500/40";
-    case "Respondida":
-      return "bg-violet-500/10 text-violet-300 border border-violet-500/40";
     case "Resolvida":
       return "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40";
-    case "Não solucionada":
-      return "bg-rose-500/10 text-rose-300 border border-rose-500/40";
+    case "Encerrada":
+      return "bg-violet-500/10 text-violet-300 border border-violet-500/40";
     default:
       return "bg-slate-500/10 text-slate-200 border border-slate-500/30";
   }

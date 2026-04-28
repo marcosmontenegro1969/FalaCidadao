@@ -304,7 +304,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     descricao:
       "Faixa de pedestres apagada em frente à escola, dificultando a travessia com segurança.",
     pontoReferencia: "Em frente à Escola Municipal Piedade",
-    status: "Resolvida",
+    status: "Encerrada",
     createdAt: "2025-12-05",
 
     userId: "maria@gmail.com",

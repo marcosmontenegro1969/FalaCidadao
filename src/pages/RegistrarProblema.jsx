@@ -9,7 +9,7 @@ import { ThemeContext } from "../context/ThemeContext";
 import { CITY_THEMES } from "../theme/cities";
 
 // Constants
-import { CATEGORIAS_DEMANDAS } from "../constants/categoriasDemandas";
+import { LIMITE_DISTANCIA_FOTOS_METROS } from "../constants/registroProblema";
 
 // Services
 import { criarDemanda, reforcarDemanda } from "../services/demandasActions";
@@ -26,14 +26,16 @@ import { useFotoPreviews } from "../hooks/useFotoPreviews";
 
 // Components
 import AlertOverlay from "../components/AlertOverlay";
+import AvisoResponsabilidade from "../components/AvisoResponsabilidade";
 import BackButton from "../components/BackButton";
+import BotoesAcaoRegistro from "../components/BotoesAcaoRegistro";
 import EvidenciasPicker from "../components/EvidenciasPicker";
 import ModalFotos from "../components/ModalFotos";
 import ProcessingOverlay from "../components/ProcessingOverlay";
-import PulseButton from "../components/PulseButton";
-import SecondaryActionButton from "../components/SecondaryActionButton";
 import SugestoesDemandas from "../components/SugestoesDemandas";
 import CameraCaptureModal from "../components/CameraCaptureModal";
+import FormNovoRegistro from "../components/FormNovoRegistro";
+import FormAtualizacaoDemanda from "../components/FormAtualizacaoDemanda";
 
 // Utils
 import { handlePickFotos } from "../utils/handlePickFotos";
@@ -42,26 +44,7 @@ import { normalizeCityKey } from "../utils/normalizeCity";
 import { scrollTo } from "../utils/scrollTo";
 import { computeDupScore } from "../utils/triagem";
 import { reverseGeocodeCity } from "../utils/reverseGeocode";
-
-const OPCOES_TEMPO_PERCEBIDO = [
-  { value: "hoje", label: "Hoje" },
-  { value: "alguns_dias", label: "Há alguns dias" },
-  { value: "uma_semana", label: "Há cerca de 1 semana" },
-  { value: "quinze_dias", label: "Há cerca de 15 dias" },
-  { value: "um_mes", label: "Há cerca de 1 mês" },
-  { value: "mais_de_um_mes", label: "Há mais de 1 mês" },
-];
-
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-
-    reader.readAsDataURL(file);
-  });
-}
+import { fileToDataUrl } from "../utils/fileToDataUrl";
 
 export default function RegistrarProblema() {
   const navigate = useNavigate();
@@ -75,7 +58,7 @@ export default function RegistrarProblema() {
   const avisoRef = useRef(null);
   const fotosPickRef = useRef(null);
   const toastTimeoutRef = useRef(null);
-  const LIMITE_DISTANCIA_FOTOS_METROS = 30;
+  const cameraAutoOpenedRef = useRef(false);
 
   const [categoria, setCategoria] = useState("Iluminação");
   const [tempoPercebido, setTempoPercebido] = useState("hoje");
@@ -109,6 +92,19 @@ export default function RegistrarProblema() {
   const [modalTitle, setModalTitle] = useState("");
 
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
+
+  useEffect(() => {
+  const usuarioLogado = Boolean(localStorage.getItem("falaCidadao.auth"));
+
+  if (!usuarioLogado) return;
+  if (cameraAutoOpenedRef.current) return;
+  if (cameraModalOpen) return;
+  if (fotosSelecionadas.length > 0) return;
+  if (acaoEscolhida && acaoEscolhida !== "novo") return;
+
+  cameraAutoOpenedRef.current = true;
+  setCameraModalOpen(true);
+}, [cameraModalOpen, fotosSelecionadas.length, acaoEscolhida]);
 
   const [demandasBase, setDemandasBase] = useState([]);
   const [aceiteResponsabilidade, setAceiteResponsabilidade] = useState(false);
@@ -673,6 +669,7 @@ export default function RegistrarProblema() {
     setModalFotos([]);
     setModalIdx(0);
     setModalTitle("");
+    setCameraModalOpen(false);
   }
 
   const evidenciasValidas =
@@ -729,7 +726,9 @@ export default function RegistrarProblema() {
 
         </div>
 
-        {(acaoEscolhida === null || acaoEscolhida === "novo") && (
+        {(acaoEscolhida === null ||
+          acaoEscolhida === "novo" ||
+          acaoEscolhida === "atualizar") && (
           <>
 
             <EvidenciasPicker
@@ -765,216 +764,50 @@ export default function RegistrarProblema() {
         {triagemAtiva && acaoEscolhida && (
           <>
             {acaoEscolhida === "atualizar" && (
-              <div
-                ref={descricaoRef}
-                className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 backdrop-blur-sm p-5 space-y-3"
-              >
-                <h2 className="text-lg font-semibold">Adicionar atualização à demanda existente</h2>
-
-                <p className="text-sm text-textsoft">
-                  Descreva o que há de novo nesta ocorrência. As fotos já anexadas serão usadas como evidência da atualização.
-                </p>
-
-                <label className="space-y-1 block">
-                  <span className="text-xs text-textmuted">Descrição da atualização</span>
-                  <textarea
-                    ref={descricaoInputRef}
-                    value={descricaoNovo}
-                    onChange={(e) => setDescricaoNovo(e.target.value)}
-                    rows={4}
-                    placeholder="Ex.: O problema continua no local e agora apresenta agravamento..."
-                    className={[
-                      "w-full rounded-lg px-3 py-2 text-sm leading-relaxed",
-                      "bg-surfaceLight text-textmain border border-borderSubtle",
-                      "outline-none focus:ring-2 focus:ring-primary/40",
-                      "hover:bg-surfaceLight/70 transition",
-                      "placeholder:text-textmuted/70",
-                      "resize-none",
-                    ].join(" ")}
-                  />
-                </label>
-
-                <label className="space-y-1 block">
-                  <span className="text-xs text-textmuted">Ponto de referência</span>
-                  <input
-                    value={pontoReferencia}
-                    onChange={(e) => setPontoReferencia(e.target.value)}
-                    placeholder="Ex.: em frente ao mercado X, ao lado da parada Y..."
-                    className={[
-                      "w-full rounded-lg px-3 py-2 text-sm",
-                      "bg-surfaceLight text-textmain border border-borderSubtle",
-                      "outline-none focus:ring-2 focus:ring-primary/40",
-                      "hover:bg-surfaceLight/70 transition",
-                      "placeholder:text-textmuted/70",
-                    ].join(" ")}
-                  />
-                </label>
-              </div>
+              <FormAtualizacaoDemanda
+                descricaoRef={descricaoRef}
+                descricaoInputRef={descricaoInputRef}
+                descricaoNovo={descricaoNovo}
+                setDescricaoNovo={setDescricaoNovo}
+                pontoReferencia={pontoReferencia}
+                setPontoReferencia={setPontoReferencia}
+              />
             )}
             {acaoEscolhida === "novo" && (
-              <div
-                ref={descricaoRef}
-                className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 backdrop-blur-sm p-5 space-y-3"
-              >
-                <h2 className="text-lg font-semibold">Complete as informações do novo registro</h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="space-y-1 block">
-                    <span className="text-xs text-textmuted">Categoria</span>
-                    <select
-                      title="Selecione a categoria do problema"
-                      value={categoria}
-                      onChange={(e) => setCategoria(e.target.value)}
-                      className={[
-                        "w-full rounded-lg px-3 py-2 text-sm",
-                        "bg-surfaceLight text-textmain border border-borderSubtle",
-                        "outline-none focus:ring-2 focus:ring-primary/40",
-                        "hover:bg-surfaceLight/70 transition",
-                      ].join(" ")}
-                    >
-                      {CATEGORIAS_DEMANDAS.map((c) => (
-                        <option key={c} value={c} className="text-black">
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="space-y-1 block">
-                    <span className="text-xs text-textmuted">
-                      Há quanto tempo você percebe esse problema?
-                    </span>
-                    <select
-                      title="Selecione há quanto tempo você percebe esse problema"
-                      value={tempoPercebido}
-                      onChange={(e) => setTempoPercebido(e.target.value)}
-                      className={[
-                        "w-full rounded-lg px-3 py-2 text-sm",
-                        "bg-surfaceLight text-textmain border border-borderSubtle",
-                        "outline-none focus:ring-2 focus:ring-primary/40",
-                        "hover:bg-surfaceLight/70 transition",
-                      ].join(" ")}
-                    >
-                      {OPCOES_TEMPO_PERCEBIDO.map((opcao) => (
-                        <option key={opcao.value} value={opcao.value} className="text-black">
-                          {opcao.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-
-                <label className="space-y-1 block">
-                  <span className="text-xs text-textmuted">Descrição do problema</span>
-                  <textarea
-                    ref={descricaoInputRef}
-                    value={descricaoNovo}
-                    onChange={(e) => setDescricaoNovo(e.target.value)}
-                    rows={4}
-                    placeholder="Ex.: Buraco grande na via, próximo ao cruzamento com a Rua X, causando risco a pedestres e veículos."
-                    className={[
-                      "w-full rounded-lg px-3 py-2 text-sm leading-relaxed",
-                      "bg-surfaceLight text-textmain border border-borderSubtle",
-                      "outline-none focus:ring-2 focus:ring-primary/40",
-                      "hover:bg-surfaceLight/70 transition",
-                      "placeholder:text-textmuted/70",
-                      "resize-none",
-                    ].join(" ")}
-                  />
-                </label>
-
-                <label className="space-y-1 block">
-                  <span className="text-xs text-textmuted">Ponto de referência</span>
-                  <input
-                    value={pontoReferencia}
-                    onChange={(e) => setPontoReferencia(e.target.value)}
-                    placeholder="Ex.: em frente ao mercado X, ao lado da parada Y..."
-                    className={[
-                      "w-full rounded-lg px-3 py-2 text-sm",
-                      "bg-surfaceLight text-textmain border border-borderSubtle",
-                      "outline-none focus:ring-2 focus:ring-primary/40",
-                      "hover:bg-surfaceLight/70 transition",
-                      "placeholder:text-textmuted/70",
-                    ].join(" ")}
-                  />
-                </label>
-              </div>
+              <FormNovoRegistro
+                descricaoRef={descricaoRef}
+                descricaoInputRef={descricaoInputRef}
+                categoria={categoria}
+                setCategoria={setCategoria}
+                tempoPercebido={tempoPercebido}
+                setTempoPercebido={setTempoPercebido}
+                descricaoNovo={descricaoNovo}
+                setDescricaoNovo={setDescricaoNovo}
+                pontoReferencia={pontoReferencia}
+                setPontoReferencia={setPontoReferencia}
+              />
             )}
 
             <div
               ref={avisoRef}
               className="rounded-2xl border border-surfaceLight bg-surfaceLight/10 p-4 space-y-2"
             >
-              <label className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-2.5">
-                <input
-                  type="checkbox"
-                  checked={aceiteResponsabilidade}
-                  onChange={(e) => setAceiteResponsabilidade(e.target.checked)}
-                  className="mt-0.5"
-                />
-                <span className="text-[12px] text-textsoft leading-5">
-                  <span className="text-textmain font-semibold">
-                    Aviso de responsabilidade:
-                  </span>{" "}
-                    ao enviar uma ocorrência, você confirma que as informações e imagens são verdadeiras e 
-                    correspondem ao problema relatado. O envio de conteúdo falso, manipulado ou usado para 
-                    brincadeiras, fraude ou denúncia indevida pode resultar em bloqueio de acesso, exclusão
-                     de registros e adoção das medidas cabíveis conforme a legislação.
-                </span>
-              </label>
-
-              <div className="flex flex-wrap gap-2">
-                {acaoEscolhida === "reforcar" && (
-                  <PulseButton
-                    onClick={confirmarReforco}
-                    disabled={!podeReforcar}
-                    intense={podeReforcar}
-                    className="inline-flex items-center gap-2"
-                  >
-                    Confirmar reforço
-                  </PulseButton>
-                )}
-
-                {acaoEscolhida === "atualizar" && (
-                  <PulseButton
-                    onClick={confirmarAtualizacao}
-                    disabled={!podeAdicionarAtualizacao || isProcessing}
-                    intense={!isProcessing && podeAdicionarAtualizacao}
-                    className="inline-flex items-center gap-2"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <span className="h-3.5 w-3.5 rounded-full border border-current border-t-transparent animate-spin" />
-                        Registrando atualização...
-                      </>
-                    ) : (
-                      "Confirmar atualização"
-                    )}
-                  </PulseButton>
-                )}
-
-                {acaoEscolhida === "novo" && (
-                  <PulseButton
-                    onClick={confirmarNovo}
-                    disabled={!podeRegistrarNovo || isProcessing}
-                    intense={!isProcessing && podeRegistrarNovo}
-                    className="inline-flex items-center gap-2"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <span className="h-3.5 w-3.5 rounded-full border border-current border-t-transparent animate-spin" />
-                        Processando fotos...
-                      </>
-                    ) : (
-                      "Registrar novo problema"
-                    )}
-                  </PulseButton>
-                )}
-
-                <SecondaryActionButton onClick={resetTotal}>
-                  Cancelar registro
-                </SecondaryActionButton>
-              </div>
+              <AvisoResponsabilidade
+                checked={aceiteResponsabilidade}
+                onChange={setAceiteResponsabilidade}
+                contexto={acaoEscolhida === "atualizar" ? "atualizacao" : "demanda"}
+              />
+              <BotoesAcaoRegistro
+                acaoEscolhida={acaoEscolhida}
+                confirmarReforco={confirmarReforco}
+                confirmarAtualizacao={confirmarAtualizacao}
+                confirmarNovo={confirmarNovo}
+                resetTotal={resetTotal}
+                podeReforcar={podeReforcar}
+                podeAdicionarAtualizacao={podeAdicionarAtualizacao}
+                podeRegistrarNovo={podeRegistrarNovo}
+                isProcessing={isProcessing}
+              />
             </div>
           </>
         )}
