@@ -47,12 +47,6 @@ export default function Topo() {
       isActive ? "bg-surfaceLight/60 text-textmain" : "text-textmain hover:bg-surfaceLight/60"
     }`;
 
-  const ctaClass =
-    "inline-flex items-center justify-center rounded-xl border border-primary/40 bg-primary/25 px-3 py-1.5 text-sm font-semibold text-textmain hover:bg-primary/35 hover:border-primary/60 transition";
-  
-  const userChipClass =
-    "inline-flex items-center gap-2 rounded-xl border border-surfaceLight bg-surfaceLight/20 px-3 py-2 text-xs text-textmain";
-
   return (
     <header className="sticky top-0 z-40 border-b border-surfaceLight bg-surface/95 backdrop-blur">
       <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-6">
@@ -93,11 +87,7 @@ export default function Topo() {
             ))}
           </nav>
 
-          {!authUser ? (
-            <NavLink to="/entrar" className={ctaClass}>
-              Entrar
-            </NavLink>
-          ) : (
+          {authUser && (
             <div
               className="inline-flex w-[200px] items-center rounded-xl bg-surfaceLight text-textmain border border-textmuted/40 px-3 py-1.5 text-sm"
               title={authUser.email}
@@ -119,7 +109,6 @@ export default function Topo() {
               </button>
             </div>
           )}
-
           <div className="w-[200px] max-w-[200px]">
             <CitySelector />
           </div>
@@ -162,18 +151,11 @@ export default function Topo() {
                 {item.label}
               </NavLink>
             ))}
-            {!authUser ? (
-              <NavLink
-                to="/entrar"
-                className="w-full text-left px-3 py-2 rounded-xl font-semibold border border-surfaceLight bg-surfaceLight/30 text-textmain hover:bg-surfaceLight/60 transition"
-                onClick={closeMobile}
-              >
-                Entrar
-              </NavLink>
-            ) : (
+            {authUser && (
               <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl border border-surfaceLight bg-surfaceLight/20">
                 <div className="inline-flex items-center text-xs text-textmain" title={authUser.email}>
-                  <span className="font-semibold truncate max-w-[220px]" 
+                  <span
+                    className="font-semibold truncate max-w-[220px]"
                     title={authUser?.nome || "Cidadão"}
                   >
                     {authUser?.nome || "Cidadão"}
@@ -189,7 +171,6 @@ export default function Topo() {
                 </button>
               </div>
             )}
-
             <div className="mt-2 text-[11px] text-textmuted">
               · Projeto piloto · Cidades da Região Metropolitana
             </div>
