@@ -81,27 +81,8 @@ export default function EvidenciasPicker({
         )}
 
         <div className="flex flex-wrap items-center gap-2">
-          <label
-            ref={fotosPickRef}
-            className={[
-              "inline-flex items-center justify-center gap-2",
-              "px-4 py-2 rounded-lg border",
-              "border-borderSubtle bg-overlay text-textmain",
-              "hover:bg-overlayHover transition cursor-pointer",
-              "text-sm font-medium",
-            ].join(" ")}
-          >
-            Selecionar fotos
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={onPickFotos}
-              className="hidden"
-            />
-          </label>
-
           <button
+            ref={fotosPickRef}
             type="button"
             onClick={onOpenCamera}
             className={[
@@ -112,7 +93,7 @@ export default function EvidenciasPicker({
               "text-sm font-medium",
             ].join(" ")}
           >
-            Capturar pela câmera
+            Capturar evidência
           </button>
 
           {acaoSecundaria}

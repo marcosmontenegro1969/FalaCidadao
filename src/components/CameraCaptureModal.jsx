@@ -237,7 +237,7 @@ export default function CameraCaptureModal({
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
             <h2 className="text-lg font-semibold text-white">
-              Capturar pela câmera
+              Capturar evidência
             </h2>
             <p className="text-sm text-white/70">
               Modo demo desktop: a foto é capturada ao vivo e a localização é

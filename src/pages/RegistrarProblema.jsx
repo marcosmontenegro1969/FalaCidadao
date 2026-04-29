@@ -45,6 +45,9 @@ import { scrollTo } from "../utils/scrollTo";
 import { computeDupScore } from "../utils/triagem";
 import { reverseGeocodeCity } from "../utils/reverseGeocode";
 import { fileToDataUrl } from "../utils/fileToDataUrl";
+import { dataUrlToFile } from "../utils/dataUrlToFile";
+
+const PRE_LOGIN_DRAFT_KEY = "falaCidadao.preLoginDraft";
 
 export default function RegistrarProblema() {
   const navigate = useNavigate();
@@ -94,17 +97,111 @@ export default function RegistrarProblema() {
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
 
   useEffect(() => {
-  const usuarioLogado = Boolean(localStorage.getItem("falaCidadao.auth"));
+    const usuarioLogado = Boolean(localStorage.getItem("falaCidadao.auth"));
+    const temRascunhoPreLogin = Boolean(
+      sessionStorage.getItem(PRE_LOGIN_DRAFT_KEY)
+    );
 
-  if (!usuarioLogado) return;
-  if (cameraAutoOpenedRef.current) return;
-  if (cameraModalOpen) return;
-  if (fotosSelecionadas.length > 0) return;
-  if (acaoEscolhida && acaoEscolhida !== "novo") return;
+    if (!usuarioLogado) return;
+    if (temRascunhoPreLogin) return;
+    if (cameraAutoOpenedRef.current) return;
+    if (cameraModalOpen) return;
+    if (fotosSelecionadas.length > 0) return;
+    if (acaoEscolhida && acaoEscolhida !== "novo") return;
 
-  cameraAutoOpenedRef.current = true;
-  setCameraModalOpen(true);
-}, [cameraModalOpen, fotosSelecionadas.length, acaoEscolhida]);
+    cameraAutoOpenedRef.current = true;
+    setCameraModalOpen(true);
+  }, [cameraModalOpen, fotosSelecionadas.length, acaoEscolhida]);
+
+  useEffect(() => {
+    const usuarioLogado = Boolean(localStorage.getItem("falaCidadao.auth"));
+    if (!usuarioLogado) return;
+    if (fotosSelecionadas.length > 0) return;
+
+    const rawDraft = sessionStorage.getItem(PRE_LOGIN_DRAFT_KEY);
+    if (!rawDraft) return;
+
+    try {
+      const draft = JSON.parse(rawDraft);
+      const lat = Number(draft?.meta?.lat);
+      const lng = Number(draft?.meta?.lng);
+
+      if (
+        draft?.origem !== "captura_pre_login" ||
+        !draft?.foto?.dataUrl ||
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lng)
+      ) {
+        sessionStorage.removeItem(PRE_LOGIN_DRAFT_KEY);
+        return;
+      }
+      const file = dataUrlToFile(
+        draft.foto.dataUrl,
+        draft.foto.name || "captura-pre-login.jpg",
+        draft.foto.type || "image/jpeg",
+        draft.foto.lastModified || Date.now()
+      );
+
+      const meta = {
+        key:
+          draft.meta.key ||
+          `${draft.foto.name || "captura-pre-login.jpg"}__${
+            draft.foto.size || 0
+          }__${draft.foto.lastModified || Date.now()}`,
+        name: draft.meta.name || draft.foto.name || "captura-pre-login.jpg",
+        size: draft.meta.size || draft.foto.size || file.size,
+        lastModified:
+          draft.meta.lastModified || draft.foto.lastModified || file.lastModified,
+        lat,
+        lng,
+        takenAt: draft.meta.takenAt || draft.createdAt || new Date().toISOString(),
+        source: draft.meta.source || "browser_capture",
+        accuracy: draft.meta.accuracy ?? null,
+      };
+
+      setFotosSelecionadas([file]);
+      setFotosMeta([meta]);
+
+      setLocalRelato({
+        lat,
+        lng,
+        source: meta.source,
+      });
+
+      if (draft.enderecoDetectado) {
+        setEnderecoDetectado(draft.enderecoDetectado);
+      } else {
+        reverseGeocodeCity(lat, lng)
+          .then((geo) => {
+            setEnderecoDetectado({
+              cidade: geo?.cidade || "",
+              estado: geo?.estado || "",
+              bairro: geo?.bairro || "",
+              rua: geo?.rua || "",
+            });
+          })
+          .catch(() => {
+            setEnderecoDetectado(null);
+          });
+      }      
+      setAcaoEscolhida("novo");
+      setDemandaAlvoId(null);
+
+      cameraAutoOpenedRef.current = true;
+
+      showToast(
+        "success",
+        "Foto recuperada. Complete as informações para enviar o registro."
+      );
+    } catch (error) {
+      console.error(error);
+      sessionStorage.removeItem(PRE_LOGIN_DRAFT_KEY);
+      showToast(
+        "error",
+        "Não foi possível recuperar a foto capturada antes do login."
+      );
+    }
+  }, [fotosSelecionadas.length]);
 
   const [demandasBase, setDemandasBase] = useState([]);
   const [aceiteResponsabilidade, setAceiteResponsabilidade] = useState(false);
@@ -633,6 +730,8 @@ export default function RegistrarProblema() {
         return;
       }
 
+      sessionStorage.removeItem(PRE_LOGIN_DRAFT_KEY);
+
       showToast("success", "Demanda registrada com sucesso.");
       navigate(`/painel/${res.criada.id}`);
     } catch (err) {
@@ -645,6 +744,8 @@ export default function RegistrarProblema() {
   }
 
   function resetTotal() {
+    sessionStorage.removeItem(PRE_LOGIN_DRAFT_KEY);
+    
     setCategoria("Iluminação");
     setTempoPercebido("hoje");
     setPontoReferencia("");

@@ -82,7 +82,16 @@ export default function Entrar() {
     };
 
     localStorage.setItem(AUTH_KEY, JSON.stringify(payload));
-    window.location.href = "/";
+
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect");
+
+    const redirectSeguro =
+      redirect && redirect.startsWith("/") && !redirect.startsWith("//")
+        ? redirect
+        : "/";
+
+    window.location.href = redirectSeguro;
   }
 
   useEffect(() => {
