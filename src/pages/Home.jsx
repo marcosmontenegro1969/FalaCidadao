@@ -10,6 +10,7 @@ import PulseButton from "../components/PulseButton";
 import SecondaryActionButton from "../components/SecondaryActionButton";
 import CameraCaptureModal from "../components/CameraCaptureModal";
 import { fileToDataUrl } from "../utils/fileToDataUrl";
+import DicaCidadaCard from "../components/DicaCidadaCard";
 
 const PRE_LOGIN_DRAFT_KEY = "falaCidadao.preLoginDraft";
 
@@ -22,12 +23,16 @@ function formatarResumoEngajamento(totalReforcos, totalAtualizacoes) {
   return `${totalReforcos} ${reforcoLabel} • ${totalAtualizacoes} ${atualizacaoLabel}`;
 }
 
+
+
 function statusBadgeClass(status) {
   switch (status) {
     case "Em análise":
       return "bg-amber-500/10 text-amber-300 border border-amber-500/40";
     case "Encaminhada":
       return "bg-sky-500/10 text-sky-300 border border-sky-500/40";
+    case "Resposta contestada":
+      return "bg-orange-500/10 text-orange-300 border border-orange-500/40";
     case "Resolvida":
       return "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40";
     case "Encerrada":
@@ -163,6 +168,7 @@ export default function Home() {
                 Registrar um problema
               </PulseButton>
             </div>
+            <DicaCidadaCard />
           </div>
 
           <div className="rounded-2xl border border-borderSubtle bg-surfaceLight/80 backdrop-blur-sm p-4 space-y-4 text-sm">

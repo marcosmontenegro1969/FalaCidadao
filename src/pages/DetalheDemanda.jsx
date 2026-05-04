@@ -24,6 +24,8 @@ function statusBadgeClass(status) {
       return "bg-amber-500/10 text-amber-300 border border-amber-500/40";
     case "Encaminhada":
       return "bg-sky-500/10 text-sky-300 border border-sky-500/40";
+    case "Resposta contestada":
+      return "bg-orange-500/10 text-orange-300 border border-orange-500/40";
     case "Resolvida":
       return "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40";
     case "Encerrada":
@@ -354,13 +356,48 @@ export default function DetalheDemanda() {
   const tempoPercebidoExibido =
   TEMPO_PERCEBIDO_LABELS[demanda.tempoPercebido] || "";
   
-  const orgaoExibicao = demanda.orgao?.nome
-    ? demanda.orgao.nome
-    : "Triagem Fala Cidadão (MVP)";
+  const responsavelAtual = demanda.orgao?.nome
+    ? [
+        demanda.orgao.sigla || demanda.orgao.nome,
+        demanda.orgao.cidade || cidadeEstadoExibido,
+      ]
+        .filter(Boolean)
+        .join(" — ")
+    : "Ainda em triagem";
 
-  const orgaoDetalhe = demanda.orgao?.email
-    ? `Contato: ${demanda.orgao.email}`
-    : "Sem encaminhamento automático nesta etapa do MVP.";
+  const dataEncaminhamento = Array.isArray(demanda.historico)
+    ? demanda.historico.find((item) =>
+        String(item?.evento || "")
+          .toLowerCase()
+          .includes("encaminhada")
+      )?.data
+    : null;
+
+  function formatarEventoHistorico(eventoOriginal) {
+    const evento = String(eventoOriginal || "");
+
+    if (evento === "Demanda encaminhada ao responsável pelo atendimento.") {
+      return `Demanda encaminhada para ${responsavelAtual}.`;
+    }
+
+    if (evento === "Primeira resposta do responsável registrada.") {
+      return `Primeira resposta de ${responsavelAtual} registrada.`;
+    }
+
+    if (evento === "Segunda resposta do responsável registrada.") {
+      return `Segunda resposta de ${responsavelAtual} registrada.`;
+    }
+
+    if (evento === "Resposta do responsável contestada pelo cidadão.") {
+      return `Resposta de ${responsavelAtual} contestada pelo cidadão.`;
+    }
+
+    if (evento === "Resposta do responsável aceita pelo cidadão.") {
+      return `Resposta de ${responsavelAtual} aceita pelo cidadão.`;
+    }
+
+    return evento;
+  }  
 
   const respostasResponsavel = Array.isArray(demanda.respostaResponsavel)
     ? demanda.respostaResponsavel
@@ -808,6 +845,23 @@ export default function DetalheDemanda() {
             </div>
           </div>
 
+          {/* Responsável e encaminhamento */}
+          <div className="text-sm text-textsoft space-y-1">
+            <div>
+              Responsável atual:{" "}
+              <span className="text-textmain">{responsavelAtual}</span>
+            </div>
+
+            <div>
+              Encaminhamento:{" "}
+              <span className="text-textmain">
+                {dataEncaminhamento
+                  ? formatDateBR(dataEncaminhamento)
+                  : "Ainda em triagem"}
+              </span>
+            </div>
+          </div>
+
           {/* Descrição */}
           <p className="text-textmain leading-relaxed">
             {demanda.descricao}
@@ -961,8 +1015,10 @@ export default function DetalheDemanda() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-textmain">{h.evento}</p>
-                  </div>
+                      <p className="text-sm text-textmain">
+                        {formatarEventoHistorico(h.evento)}
+                      </p>
+                    </div>
                 ))}
               </div>
             ) : (
@@ -970,27 +1026,6 @@ export default function DetalheDemanda() {
                 Sem eventos registrados no histórico ainda.
               </p>
             )}
-          </div>
-        ) : null}
-
-        {/* Responsável pelo atendimento */}
-        {!fluxoAtualizacaoAtivo ? (
-          <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/15 p-5 space-y-3">
-            <h2 className="text-lg font-semibold">
-              Responsável pelo atendimento
-            </h2>
-
-            <p className="text-sm text-textmain">
-              {orgaoExibicao}
-            </p>
-
-            <p className="text-sm text-textsoft leading-relaxed">
-              Este responsável é o destinatário das informações organizadas pelo Fala Cidadão para análise e eventual manifestação sobre a demanda registrada.
-            </p>
-
-            <p className="text-[11px] text-textmuted">
-              {orgaoDetalhe}
-            </p>
           </div>
         ) : null}
 

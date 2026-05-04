@@ -26,8 +26,15 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     categoria: "Iluminação",
     descricao: "Poste apagado há 3 dias na Rua X",
     pontoReferencia: "Próximo ao supermercado ABC",
-    status: "Em análise",
+    status: "Resposta contestada",
     createdAt: "2025-12-12",
+    orgao: {
+      nome: "EMLURB",
+      sigla: "EMLURB",
+      descricao: "Autarquia responsável por limpeza urbana, manutenção e serviços urbanos no Recife",
+      cidade: "Recife/PE",
+      email: "atendimento@recife.pe.gov.br",
+    },
 
     userId: "jose@gmail.com",
     autorId: "jose@gmail.com",
@@ -39,6 +46,27 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       "/mock/DMD-2025-0001-3.jpg",
     ],
     impacto: { confirmacoes: 35, ultimaConfirmacao: "2025-12-16" },
+    respostaResponsavel: [
+      {
+        data: "2025-12-14",
+        protocolo: "FC-RESP-2025-0001",
+        responsavel: "EMLURB",
+        tipoResponsavel: "responsavel",
+        canal: "simulado",
+        rodada: 1,
+        texto:
+          "Informamos que a demanda foi recebida e será avaliada pela equipe responsável para verificação das providências cabíveis.",
+        statusCidadao: "contestada",
+        avaliadaEm: "2025-12-15T09:30:00.000Z",
+        contestacao: {
+          texto:
+            "A resposta não informa prazo nem providência concreta para resolver o problema de iluminação no local.",
+          data: "2025-12-15T09:30:00.000Z",
+          autorId: "jose@gmail.com",
+          autorNome: "JOSE",
+        },
+      },
+    ],    
     historico: [
       {
         data: "2025-12-12",
@@ -48,8 +76,19 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       {
         data: "2025-12-13",
         tipo: "sistema",
+        evento: "Demanda encaminhada ao responsável pelo atendimento.",
+      },
+      {
+        data: "2025-12-14",
+        tipo: "responsavel",
         evento:
-          "Triagem inicial em andamento para identificação do responsável pelo atendimento.",
+          "EMLURB informou que a demanda foi recebida e será avaliada pela equipe responsável para verificação das providências cabíveis.",
+      },
+      {
+        data: "2025-12-15",
+        tipo: "cidadao",
+        evento:
+          "Resposta contestada pelo cidadão. Aguardando nova manifestação do responsável.",
       },
     ],    
   },
@@ -79,6 +118,13 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     pontoReferencia: "Próximo ao ponto de ônibus na Rua Y",
     status: "Encaminhada",
     createdAt: "2025-12-11",
+    orgao: {
+      nome: "EMLURB",
+      sigla: "EMLURB",
+      descricao: "Autarquia responsável por limpeza urbana, manutenção e serviços urbanos no Recife",
+      cidade: "Recife/PE",
+      email: "atendimento@recife.pe.gov.br",
+    },    
 
     userId: "maria@gmail.com",
     autorId: "maria@gmail.com",
@@ -130,6 +176,13 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     pontoReferencia: "Próximo ao semáforo da Av. Sul Governador Cid Sampaio",
     status: "Resolvida",
     createdAt: "2025-12-16",
+    orgao: {
+      nome: "Secretaria de Infraestrutura Urbana",
+      sigla: "SEINFRA",
+      descricao: "Responsável por manutenção viária e infraestrutura urbana no Recife",
+      cidade: "Recife/PE",
+      email: "infraestrutura@recife.pe.gov.br",
+    },    
     userId: "flavio@gmail.com",
     autorId: "flavio@gmail.com",
     autorNome: "FLAVIO",
@@ -236,6 +289,13 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     pontoReferencia: "Entre as ruas A e B no Ibura",
     status: "Encaminhada",
     createdAt: "2025-12-14",
+    orgao: {
+      nome: "EMLURB",
+      sigla: "EMLURB",
+      descricao: "Autarquia responsável por limpeza urbana, manutenção e serviços urbanos no Recife",
+      cidade: "Recife/PE",
+      email: "atendimento@recife.pe.gov.br",
+    },    
 
     userId: "jose@gmail.com",
     autorId: "jose@gmail.com",
@@ -251,7 +311,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       {
         data: "2025-12-18",
         protocolo: "FC-RESP-2025-0006",
-        responsavel: "Secretaria de Serviços Urbanos",
+        responsavel: "EMLURB",
         tipoResponsavel: "orgao_publico",
         canal: "simulado",
         texto:
@@ -275,7 +335,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
         data: "2025-12-18",
         tipo: "responsavel",
         evento:
-          "Resposta do responsável registrada: Secretaria de Serviços Urbanos informou que a demanda foi recebida e encaminhada à equipe responsável para análise e programação de atendimento.",
+          "EMLURB informou que a demanda foi recebida e encaminhada à equipe responsável para análise e programação de atendimento.",
       },
     ],    
   },
@@ -306,6 +366,13 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     pontoReferencia: "Em frente à Escola Municipal Piedade",
     status: "Encerrada",
     createdAt: "2025-12-05",
+    orgao: {
+      nome: "Secretaria de Mobilidade Urbana de Jaboatão",
+      sigla: "SEMOB",
+      descricao: "Responsável por mobilidade, trânsito e sinalização viária no município",
+      cidade: "Jaboatão dos Guararapes/PE",
+      email: "mobilidade@jaboatao.pe.gov.br",
+    },
 
     userId: "maria@gmail.com",
     autorId: "maria@gmail.com",
@@ -317,7 +384,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       {
         data: "2025-12-06",
         protocolo: "FC-RESP-2025-0007",
-        responsavel: "Secretaria de Mobilidade Urbana",
+        responsavel: "SEMOB Jaboatão",
         tipoResponsavel: "orgao_publico",
         canal: "simulado",
         rodada: 1,
@@ -336,7 +403,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       {
         data: "2025-12-09",
         protocolo: "FC-RESP-2025-0007-R2",
-        responsavel: "Secretaria de Mobilidade Urbana",
+        responsavel: "SEMOB Jaboatão",
         tipoResponsavel: "orgao_publico",
         canal: "simulado",
         rodada: 2,

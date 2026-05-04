@@ -14,10 +14,11 @@ const STATUSES = [
   "Todos",
   "Em análise",
   "Encaminhada",
-  "Respondida",
+  "Resposta contestada",
   "Resolvida",
-  "Não solucionada",
+  "Encerrada",
 ];
+
 const AUTH_KEY = "falaCidadao.auth";
 
 function getAuthUser() {
@@ -44,6 +45,8 @@ function statusBadgeClass(status) {
       return "bg-amber-500/10 text-amber-300 border border-amber-500/40";
     case "Encaminhada":
       return "bg-sky-500/10 text-sky-300 border border-sky-500/40";
+    case "Resposta contestada":
+      return "bg-orange-500/10 text-orange-300 border border-orange-500/40";
     case "Resolvida":
       return "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40";
     case "Encerrada":
@@ -70,14 +73,16 @@ export default function PainelPublico() {
   const navigate = useNavigate();
   const { city } = useContext(ThemeContext);
   const theme = CITY_THEMES[city] ?? CITY_THEMES.default;
-  const [scope, setScope] = useState("todas"); // "todas" | "minhas"
+  const location = useLocation();
+
+  const initialScope = location.state?.view === "todas" ? "todas" : "cidade";
+
+  const [scope, setScope] = useState(initialScope); // "minhas" | "cidade" | "todas"
   const [categoria, setCategoria] = useState("Todas");
   const [status, setStatus] = useState("Todos");
   const [busca, setBusca] = useState("");
   const [demandasBase, setDemandasBase] = useState([]);
   const [loading, setLoading] = useState(true);
-  const location = useLocation();
-  const view = location.state?.view ?? "cidade";
   const [ordenacao, setOrdenacao] = useState("recentes");
   const [userLocation, setUserLocation] = useState(null);
   const [locationStatus, setLocationStatus] = useState("idle");
@@ -136,15 +141,14 @@ export default function PainelPublico() {
     const cidadeDaDemanda = (d) => d.cidadeRelato || d.cidade;
 
     return demandasBase.filter((d) => {
-      if (view === "cidade" && cidadeDaDemanda(d) !== city) return false;
-      if (view === "todas" && d.status === "Resolvida") return false;
+      if (scope === "cidade" && cidadeDaDemanda(d) !== city) return false;
 
-    if (scope === "minhas") {
-      if (!isAutenticado) return false;
+      if (scope === "minhas") {
+        if (!isAutenticado) return false;
 
-      const donoDaDemanda = d.autorId || d.userId || null;
-      if (donoDaDemanda !== currentUserId) return false;
-    }
+        const donoDaDemanda = d.autorId || d.userId || null;
+        if (donoDaDemanda !== currentUserId) return false;
+      }
 
       if (categoria !== "Todas" && d.categoria !== categoria) return false;
       if (status !== "Todos" && d.status !== status) return false;
@@ -154,8 +158,7 @@ export default function PainelPublico() {
       const haystack = `${d.id} ${d.bairro} ${d.categoria} ${d.descricao}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [scope, categoria, status, busca, city, demandasBase, view, isAutenticado, currentUserId]);
-
+  }, [scope, categoria, status, busca, city, demandasBase, isAutenticado, currentUserId]);
     function toRad(value) {
       return (value * Math.PI) / 180;
     }
@@ -194,14 +197,11 @@ export default function PainelPublico() {
         return dateB - dateA;
       };
 
-      if (
-        ordenacao === "proximas" &&
-        userLocation &&
-        Number.isFinite(userLocation.lat) &&
-        Number.isFinite(userLocation.lng)
-      ) {
-        return lista
-          .map((d) => {
+    const listaComDistancia =
+      userLocation &&
+      Number.isFinite(userLocation.lat) &&
+      Number.isFinite(userLocation.lng)
+        ? lista.map((d) => {
             const lat = d.enderecoDetectado?.lat ?? null;
             const lng = d.enderecoDetectado?.lng ?? null;
 
@@ -215,25 +215,28 @@ export default function PainelPublico() {
               ),
             };
           })
-          .sort((a, b) => {
-            const aHasDistance = a._distanceKm !== null;
-            const bHasDistance = b._distanceKm !== null;
+        : lista;
 
-            if (aHasDistance && bHasDistance) {
-              if (a._distanceKm !== b._distanceKm) {
-                return a._distanceKm - b._distanceKm;
-              }
-              return sortByRecentes(a, b);
-            }
+    if (ordenacao === "proximas" && userLocation) {
+      return listaComDistancia.sort((a, b) => {
+        const aHasDistance = a._distanceKm !== null;
+        const bHasDistance = b._distanceKm !== null;
 
-            if (aHasDistance && !bHasDistance) return -1;
-            if (!aHasDistance && bHasDistance) return 1;
+        if (aHasDistance && bHasDistance) {
+          if (a._distanceKm !== b._distanceKm) {
+            return a._distanceKm - b._distanceKm;
+          }
+          return sortByRecentes(a, b);
+        }
 
-            return sortByRecentes(a, b);
-          });
-      }
+        if (aHasDistance && !bHasDistance) return -1;
+        if (!aHasDistance && bHasDistance) return 1;
 
-      return lista.sort(sortByRecentes);
+        return sortByRecentes(a, b);
+      });
+    }
+
+    return listaComDistancia.sort(sortByRecentes);
     }, [demandasFiltradas, ordenacao, userLocation]);
 
     function formatDistance(distanceKm) {
@@ -245,6 +248,30 @@ export default function PainelPublico() {
 
       return `${distanceKm.toFixed(1).replace(".", ",")} km de você`;
     }
+
+  function formatElapsedTime(createdAt) {
+    const createdDate = new Date(createdAt);
+    const now = new Date();
+
+    if (Number.isNaN(createdDate.getTime())) return null;
+
+    const diffMs = now.getTime() - createdDate.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 0) return "hoje";
+    if (diffDays === 1) return "há 1 dia";
+    if (diffDays < 30) return `há ${diffDays} dias`;
+
+    const diffMonths = Math.floor(diffDays / 30);
+
+    if (diffMonths === 1) return "há cerca de 1 mês";
+    if (diffMonths < 12) return `há cerca de ${diffMonths} meses`;
+
+    const diffYears = Math.floor(diffDays / 365);
+
+    if (diffYears === 1) return "há cerca de 1 ano";
+    return `há cerca de ${diffYears} anos`;
+  }    
     
   return (
     <section className="flex-1 w-full">
@@ -341,17 +368,6 @@ export default function PainelPublico() {
             <div className="inline-flex rounded-lg border border-surfaceLight overflow-hidden">
               <button
                 type="button"
-                onClick={() => setScope("todas")}
-                className={`px-3 py-2 text-sm transition ${
-                  scope === "todas"
-                    ? "bg-surface text-textmain"
-                    : "bg-transparent text-textmuted hover:bg-surfaceLight/40"
-                }`}
-              >
-                Todas as demandas
-              </button>
-              <button
-                type="button"
                 onClick={() => setScope("minhas")}
                 className={`px-3 py-2 text-sm transition ${
                   scope === "minhas"
@@ -361,10 +377,43 @@ export default function PainelPublico() {
               >
                 Suas demandas
               </button>
+
+              <button
+                type="button"
+                onClick={() => setScope("cidade")}
+                className={`px-3 py-2 text-sm transition ${
+                  scope === "cidade"
+                    ? "bg-surface text-textmain"
+                    : "bg-transparent text-textmuted hover:bg-surfaceLight/40"
+                }`}
+              >
+                Nesta cidade
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setScope("todas")}
+                className={`px-3 py-2 text-sm transition ${
+                  scope === "todas"
+                    ? "bg-surface text-textmain"
+                    : "bg-transparent text-textmuted hover:bg-surfaceLight/40"
+                }`}
+              >
+                Todas
+              </button>
             </div>
 
             <span className="text-[11px] text-textmuted">
-              Exibe apenas as demandas criadas pelo usuário autenticado.
+              {scope === "minhas" &&
+                "Exibe apenas as demandas criadas pelo usuário autenticado."}
+
+              {scope === "cidade" &&
+                `Exibe as demandas da cidade em foco: ${
+                  theme.cidadeShort ?? theme.cidade ?? city
+                }.`}
+
+              {scope === "todas" &&
+                "Exibe demandas de todas as cidades cadastradas no Fala Cidadão."}
             </span>
           </div>
 
@@ -414,7 +463,7 @@ export default function PainelPublico() {
             <button
               type="button"
               onClick={() => {
-                setScope("todas");
+                setScope("cidade");
                 setCategoria("Todas");
                 setStatus("Todos");
                 setBusca("");
@@ -459,7 +508,17 @@ export default function PainelPublico() {
                       <span className="text-xs text-textmuted">
                         {bairroExibido} ·{" "}
                         {CITY_THEMES[d.cidadeRelato || d.cidade]?.cidadeShort ?? (d.cidadeRelato || d.cidade)}
-                        {ordenacao === "proximas" && Number.isFinite(d._distanceKm) && (
+
+                        {formatElapsedTime(d.createdAt) && (
+                          <>
+                            {" "}·{" "}
+                            <span className="text-textmuted">
+                              {formatElapsedTime(d.createdAt)}
+                            </span>
+                          </>
+                        )}
+
+                        {Number.isFinite(d._distanceKm) && (
                           <>
                             {" "}·{" "}
                             <span className="text-emerald-300/90">
