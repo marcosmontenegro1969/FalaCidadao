@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 
 // Context/tema
 import { ThemeContext } from "../context/ThemeContext";
+import { useAppearance } from "../context/AppearanceContext.jsx";
 import { CITY_THEMES } from "../theme/cities";
 
 // Constants
@@ -53,6 +54,12 @@ export default function RegistrarProblema() {
   const navigate = useNavigate();
 
   const { city } = useContext(ThemeContext);
+  const { appearance } = useAppearance();
+  const isLight = appearance === "light";
+  const actionPanelClass = isLight
+  ? "rounded-2xl border border-slate-300/80 bg-white/80 p-4 space-y-3 shadow-sm shadow-slate-900/5"
+  : "rounded-2xl border border-white/15 bg-surfaceLight/30 p-4 space-y-3 shadow-sm shadow-black/20";
+
   const cityTheme = CITY_THEMES[city] ?? CITY_THEMES.default;
 
   const descricaoRef = useRef(null);
@@ -638,7 +645,20 @@ export default function RegistrarProblema() {
     }, ms);
   }
 
-  function toastClass(type) {
+  function toastClass(type, appearance = "dark") {
+    const isLightMode = appearance === "light";
+
+    if (isLightMode) {
+      switch (type) {
+        case "success":
+          return "border-emerald-400 bg-emerald-100 text-emerald-800";
+        case "error":
+          return "border-rose-400 bg-rose-100 text-rose-800";
+        default:
+          return "border-sky-400 bg-sky-100 text-sky-800";
+      }
+    }
+
     switch (type) {
       case "success":
         return "border-emerald-500/40 bg-emerald-500/10 text-emerald-200";
@@ -806,7 +826,8 @@ export default function RegistrarProblema() {
           <div className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 w-full max-w-[420px]">
             <div
               className={`rounded-xl border backdrop-blur px-4 py-3 text-sm shadow-lg text-center ${toastClass(
-                toast.type
+                toast.type,
+                appearance
               )}`}
             >
               <p className="leading-snug">{toast.message}</p>
@@ -891,7 +912,7 @@ export default function RegistrarProblema() {
 
             <div
               ref={avisoRef}
-              className="rounded-2xl border border-surfaceLight bg-surfaceLight/10 p-4 space-y-2"
+              className={actionPanelClass}
             >
               <AvisoResponsabilidade
                 checked={aceiteResponsabilidade}

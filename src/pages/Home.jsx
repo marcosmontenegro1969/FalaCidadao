@@ -6,7 +6,7 @@ import { getDemandas } from "../storage/demandasStorage";
 import { ThemeContext } from "../context/ThemeContext";
 import { CITY_THEMES } from "../theme/cities";
 
-import PulseButton from "../components/PulseButton";
+import PrimaryButton from "../components/PrimaryButton";
 import SecondaryActionButton from "../components/SecondaryActionButton";
 import CameraCaptureModal from "../components/CameraCaptureModal";
 import { fileToDataUrl } from "../utils/fileToDataUrl";
@@ -136,7 +136,7 @@ export default function Home() {
   return (
     <>
       <section
-        className="bg-hero hero-wrapper flex-1 flex items-center"
+        className="bg-hero hero-wrapper home-hero home-theme-dark flex-1 flex items-center text-white"
         style={{ backgroundImage: `url('${bgUrl}')` }}
       >
         <div className="hero-wrapper-inner w-full max-w-5xl mx-auto px-4 py-16 md:py-20 grid md:grid-cols-[1.2fr,1fr] gap-10 items-center">
@@ -148,13 +148,13 @@ export default function Home() {
               Um canal simples para o cidadão falar sobre sua cidade — e o poder público responder.
             </h1>
 
-            <p className="text-textsoft text-sm md:text-base leading-relaxed">
+            <p className="text-slate-200 text-sm md:text-base leading-relaxed">
               Registre problemas onde eles acontecem, acompanhe o andamento das demandas e veja o que já foi resolvido
               na sua cidade — tudo em um painel transparente.
             </p>
 
             <div className="flex flex-wrap gap-3">
-              <PulseButton
+              <PrimaryButton
                 onClick={() => {
                   if (authUser) {
                     navigate("/registrar");
@@ -166,28 +166,28 @@ export default function Home() {
                 intense
               >
                 Registrar um problema
-              </PulseButton>
+              </PrimaryButton>
             </div>
             <DicaCidadaCard />
           </div>
 
-          <div className="rounded-2xl border border-borderSubtle bg-surfaceLight/80 backdrop-blur-sm p-4 space-y-4 text-sm">
+          <div className="rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-sm p-4 space-y-4 text-sm text-white shadow-2xl shadow-black/20">
             <div className="flex items-center justify-between">
               <span className="font-medium">Demandas recentes</span>
-              <span className="text-xs text-textmuted">Visualização pública</span>
+              <span className="text-xs text-slate-300">Visualização pública</span>
             </div>
 
             <div className="space-y-3">
               <div className="space-y-3">
                 {demandasResumo.length === 0 ? (
-                  <div className="rounded-xl border border-borderSubtle bg-overlay p-3">
-                    <p className="text-textmain">
-                      Ainda não há demandas recentes para esta cidade.
-                    </p>
-                    <p className="text-xs text-textmuted mt-1">
-                      Assim que novos registros aparecerem, eles serão exibidos aqui.
-                    </p>
-                  </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-white">
+                    Ainda não há demandas recentes para esta cidade.
+                  </p>
+                  <p className="text-xs text-slate-300 mt-1">
+                    Assim que novos registros aparecerem, eles serão exibidos aqui.
+                  </p>
+                </div>
                 ) : (
                   demandasResumo.map((d) => {
                     const bairroExibido = d.enderecoDetectado?.bairro || d.bairro || "";
@@ -207,16 +207,16 @@ export default function Home() {
                               navigate(`/painel/${d.id}`);
                             }
                           }}
-                          className="rounded-xl border border-borderSubtle bg-overlay p-3 cursor-pointer hover:bg-overlayHover hover:border-accent/40 transition"
+                          className="rounded-xl border border-white/10 bg-white/5 p-3 cursor-pointer hover:bg-white/10 hover:border-accent/40 transition"
                           title="Ver detalhes da demanda"
                         >
                         <div className="flex items-center justify-between text-xs mb-1 gap-2">
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-xs text-textsoft truncate">
+                            <span className="text-xs text-slate-300 truncate">
                               {d.categoria}
                             </span>
 
-                            <span className="text-[11px] text-textmuted truncate">
+                            <span className="text-[11px] text-slate-400 truncate">
                               {d.id}
                             </span>
                           </div>
@@ -225,14 +225,14 @@ export default function Home() {
                             {d.status}
                           </span>
 
-                          <span className="text-textmuted truncate">
+                          <span className="text-slate-400 truncate">
                             {bairroExibido || (d.cidadeRelatoLabel || d.cidadeRelato || d.cidade)}
                           </span>
                         </div>                      
-                        <p className="text-xs sm:text-sm text-textmuted font-medium">
+                        <p className="text-xs sm:text-sm text-slate-300 font-medium">
                           {formatarResumoEngajamento(totalReforcos, totalAtualizacoes)}
                         </p>
-                        <p className="text-textmain line-clamp-2">
+                        <p className="text-white line-clamp-2">
                           {d.descricao}
                         </p>
                       </div>
@@ -267,12 +267,12 @@ export default function Home() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <PulseButton
+              <PrimaryButton
                 onClick={() => navigate("/entrar?redirect=/registrar&draft=prelogin")}
                 intense
               >
                 Entrar para continuar
-              </PulseButton>
+              </PrimaryButton>
 
               <SecondaryActionButton
                 onClick={() => {

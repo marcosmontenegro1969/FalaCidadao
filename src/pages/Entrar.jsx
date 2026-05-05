@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { XMarkIcon, AdjustmentsHorizontalIcon } from "@heroicons/react/24/outline";
+import { useAppearance } from "../context/AppearanceContext.jsx";
 
 const AUTH_KEY = "falaCidadao.auth";
 const LOGIN_PREFS_KEY = "falaCidadao.loginProviders";
@@ -162,6 +163,8 @@ function loadProviderPreferences() {
 
 export default function Entrar() {
   const navigate = useNavigate();
+  const { appearance } = useAppearance();
+  const isLight = appearance === "light";
 
   const [nome, setNome] = useState("Usuário Padrão");
   const [email, setEmail] = useState("usuario@falacidadao.com");
@@ -169,6 +172,33 @@ export default function Entrar() {
   const [showEmailLogin, setShowEmailLogin] = useState(false);
   const [showCustomize, setShowCustomize] = useState(false);
   const [selectedProviderIds, setSelectedProviderIds] = useState(DEFAULT_PROVIDER_IDS);
+  const loginCardClass = isLight
+  ? "rounded-3xl border border-primary/25 bg-white/80 backdrop-blur-sm p-5 md:p-6 space-y-5 shadow-xl shadow-slate-900/10"
+  : "rounded-3xl border border-primary/30 bg-surfaceLight/25 backdrop-blur-sm p-5 md:p-6 space-y-5 shadow-xl shadow-black/10";
+
+  const secondaryProviderButtonClass = isLight
+    ? "border-slate-300 bg-white/80 hover:bg-white"
+    : "border-surfaceLight bg-surface hover:bg-surfaceLight/60";
+
+  const secondaryProviderIconBoxClass = isLight
+    ? "bg-slate-100 text-slate-900"
+    : "bg-surfaceLight";
+
+  const customizeBoxClass = isLight
+    ? "rounded-2xl border border-slate-300 bg-white/70 p-3"
+    : "rounded-2xl border border-surfaceLight bg-surface/60 p-3";
+
+  const customizeOptionClass = isLight
+    ? "flex cursor-pointer items-center gap-3 rounded-xl border border-slate-300 bg-white/80 px-3 py-2 text-sm hover:bg-white transition"
+    : "flex cursor-pointer items-center gap-3 rounded-xl border border-surfaceLight bg-surface px-3 py-2 text-sm hover:bg-surfaceLight/40 transition";
+
+  const emailFormClass = isLight
+    ? "rounded-2xl border border-slate-300/80 bg-white/80 backdrop-blur-sm p-5 space-y-4 shadow-sm shadow-slate-900/5"
+    : "rounded-2xl border border-surfaceLight bg-surfaceLight/20 backdrop-blur-sm p-5 space-y-4";
+
+  const inputClass = isLight
+    ? "w-full rounded-xl border border-slate-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-primary/40"
+    : "w-full rounded-xl border border-surfaceLight bg-surface px-3 py-2 outline-none focus:ring-2 focus:ring-primary/40";
 
   const nomeRef = useRef(null);
   const emailRef = useRef(null);
@@ -327,7 +357,7 @@ export default function Entrar() {
           </div>
         </header>
 
-        <div className="rounded-3xl border border-primary/30 bg-surfaceLight/25 backdrop-blur-sm p-5 md:p-6 space-y-5 shadow-xl shadow-black/10">
+        <div className={loginCardClass}>
           <div className="space-y-1">
             <h2 className="text-lg font-semibold">
               Escolha como quer entrar
@@ -351,14 +381,14 @@ export default function Entrar() {
                     "w-full rounded-2xl border px-4 py-4 text-left transition active:scale-[0.99]",
                     isMain
                       ? "border-primary/50 bg-primary text-white hover:opacity-95"
-                      : "border-surfaceLight bg-surface hover:bg-surfaceLight/60",
+                      : secondaryProviderButtonClass,
                   ].join(" ")}
                 >
                   <div className="flex items-center gap-3">
                     <span
                       className={[
                         "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                        isMain ? "bg-white text-textmain" : "bg-surfaceLight",
+                        isMain ? "bg-white text-textmain" : secondaryProviderIconBoxClass,
                       ].join(" ")}
                     >
                       <Icon className="h-5 w-5" />
@@ -395,7 +425,7 @@ export default function Entrar() {
             </button>
           </div>
 
-          <div className="rounded-2xl border border-surfaceLight bg-surface/60 p-3">
+          <div className={customizeBoxClass}>
             <button
               type="button"
               onClick={() => setShowCustomize((current) => !current)}
@@ -424,7 +454,7 @@ export default function Entrar() {
                     return (
                       <label
                         key={provider.id}
-                        className="flex cursor-pointer items-center gap-3 rounded-xl border border-surfaceLight bg-surface px-3 py-2 text-sm hover:bg-surfaceLight/40 transition"
+                        className={customizeOptionClass}
                       >
                         <input
                           type="checkbox"
@@ -463,7 +493,7 @@ export default function Entrar() {
         {showEmailLogin ? (
           <form
             onSubmit={handleSubmit}
-            className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 backdrop-blur-sm p-5 space-y-4"
+            className={emailFormClass}
           >
             <div className="space-y-1">
               <h2 className="text-sm font-semibold">
@@ -488,7 +518,7 @@ export default function Entrar() {
                   }
                 }}
                 placeholder="Ex.: Marcos"
-                className="w-full rounded-xl border border-surfaceLight bg-surface px-3 py-2 outline-none focus:ring-2 focus:ring-primary/40"
+                className={inputClass}
               />
             </label>
 
@@ -507,7 +537,7 @@ export default function Entrar() {
                 placeholder="seuemail@exemplo.com"
                 inputMode="email"
                 autoComplete="email"
-                className="w-full rounded-xl border border-surfaceLight bg-surface px-3 py-2 outline-none focus:ring-2 focus:ring-primary/40"
+                className={inputClass}
               />
               <div className="text-xs">
                 {email.length === 0 ? null : emailOk ? (

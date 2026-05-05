@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import CitySelector from "./CitySelector";
+import { useAppearance } from "../context/AppearanceContext.jsx";
 
 const navLinks = [
   { label: "Início", to: "/" },
@@ -13,10 +14,25 @@ const navLinks = [
 
 const AUTH_KEY = "falaCidadao.auth";
 
+const LOGO_FALA_CIDADAO_AZUL =
+  "/Logos/Logo_Desktop_Fala_Cidadao_Transp_Azul.png";
+
+const LOGO_FALA_CIDADAO_BRANCA =
+  "/Logos/Logo_Desktop_Fala_Cidadao_Transp_Branco.png";
+
 export default function Topo() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const [authUser, setAuthUser] = useState(null);
+  const { appearance, toggleAppearance } = useAppearance();
+
+  const appearanceLabel = appearance === "dark" ? "Ir para claro" : "Ir para escuro";
+  const appearanceIcon = appearance === "dark" ? "☀️" : "🌙";
+
+  const logoSrc =
+    appearance === "light"
+      ? "/Logos/Logo_Desktop_Fala_Cidadao_Transp_Azul.png"
+      : "/Logos/Logo_Desktop_Fala_Cidadao_Transp_Branco.png";
 
   useEffect(() => {
     try {
@@ -53,13 +69,13 @@ export default function Topo() {
         {/* LOGO + TÍTULO */}
         <div className="flex items-center gap-3 min-w-0 shrink-0">
           <img
-            src="/Logos/Logo_Desktop_Fala_Cidadao_Transp_Branco.png"
+            src={logoSrc}
             alt="Logo Fala Cidadão Mobile"
             className="h-9 w-auto object-contain md:hidden"
           />
 
           <img
-            src="/Logos/Logo_Desktop_Fala_Cidadao_Transp_Branco.png"
+            src={logoSrc}
             alt="Logo Fala Cidadão Desktop"
             className="h-10 w-auto object-contain hidden md:block"
           />
@@ -86,6 +102,16 @@ export default function Topo() {
               </NavLink>
             ))}
           </nav>
+
+          <button
+            type="button"
+            onClick={toggleAppearance}
+            className="inline-flex items-center gap-2 rounded-xl border border-borderSubtle bg-surfaceLight px-3 py-1.5 text-xs font-semibold text-textmain hover:bg-overlayHover transition"
+            title={`Alternar para modo ${appearanceLabel.toLowerCase()}`}
+          >
+            <span aria-hidden="true">{appearanceIcon}</span>
+            <span>{appearanceLabel}</span>
+          </button>
 
           {authUser && (
             <div
@@ -139,6 +165,22 @@ export default function Topo() {
             aria-label="Navegação mobile"
           >
             <CitySelector onChangeComplete={closeMobile} />
+
+            <button
+              type="button"
+              onClick={() => {
+                toggleAppearance();
+                closeMobile();
+              }}
+              className="w-full inline-flex items-center justify-between rounded-xl border border-borderSubtle bg-surfaceLight/40 px-3 py-2 text-sm font-semibold text-textmain hover:bg-surfaceLight/70 transition"
+              title={`Alternar para modo ${appearanceLabel.toLowerCase()}`}
+            >
+              <span>Modo de aparência</span>
+              <span className="inline-flex items-center gap-2">
+                <span aria-hidden="true">{appearanceIcon}</span>
+                <span>{appearanceLabel}</span>
+              </span>
+            </button>
 
             {navLinks.map((item) => (
               <NavLink

@@ -1,4 +1,4 @@
-import PulseButton from "./PulseButton";
+import PrimaryButton  from "./PrimaryButton";
 import SecondaryActionButton from "./SecondaryActionButton";
 
 export default function BotoesAcaoRegistro({
@@ -15,18 +15,18 @@ export default function BotoesAcaoRegistro({
   return (
     <div className="flex flex-wrap gap-2">
       {acaoEscolhida === "reforcar" && (
-        <PulseButton
+        <PrimaryButton
           onClick={confirmarReforco}
           disabled={!podeReforcar}
           intense={podeReforcar}
           className="inline-flex items-center gap-2"
         >
           Confirmar reforço
-        </PulseButton>
+        </PrimaryButton>
       )}
 
       {acaoEscolhida === "atualizar" && (
-        <PulseButton
+        <PrimaryButton
           onClick={confirmarAtualizacao}
           disabled={!podeAdicionarAtualizacao || isProcessing}
           intense={!isProcessing && podeAdicionarAtualizacao}
@@ -40,11 +40,11 @@ export default function BotoesAcaoRegistro({
           ) : (
             "Confirmar atualização"
           )}
-        </PulseButton>
+        </PrimaryButton>
       )}
 
       {acaoEscolhida === "novo" && (
-        <PulseButton
+        <PrimaryButton
           onClick={confirmarNovo}
           disabled={!podeRegistrarNovo || isProcessing}
           intense={!isProcessing && podeRegistrarNovo}
@@ -58,7 +58,7 @@ export default function BotoesAcaoRegistro({
           ) : (
             "Registrar novo problema"
           )}
-        </PulseButton>
+        </PrimaryButton>
       )}
 
       <SecondaryActionButton onClick={resetTotal}>

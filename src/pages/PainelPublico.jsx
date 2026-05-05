@@ -3,12 +3,14 @@
 import { useContext, useMemo, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext";
+import { useAppearance } from "../context/AppearanceContext.jsx";
 import { CITY_THEMES } from "../theme/cities";
 import { getDemandas } from "../storage/demandasStorage";
 import { normalizarDemandas } from "../services/demandasActions";
 import { CATEGORIAS_DEMANDAS_COM_TODAS } from "../constants/categoriasDemandas";
-import PulseButton from "../components/PulseButton";
+import PrimaryButton from "../components/PrimaryButton";
 import BackButton from "../components/BackButton";
+
 
 const STATUSES = [
   "Todos",
@@ -39,7 +41,26 @@ function getAuthUser() {
   }
 }
 
-function statusBadgeClass(status) {
+function statusBadgeClass(status, appearance = "dark") {
+  const isLight = appearance === "light";
+
+  if (isLight) {
+    switch (status) {
+      case "Em análise":
+        return "bg-amber-100 text-amber-800 border border-amber-400";
+      case "Encaminhada":
+        return "bg-sky-100 text-sky-800 border border-sky-400";
+      case "Resposta contestada":
+        return "bg-orange-100 text-orange-800 border border-orange-400";
+      case "Resolvida":
+        return "bg-emerald-100 text-emerald-800 border border-emerald-400";
+      case "Encerrada":
+        return "bg-violet-100 text-violet-800 border border-violet-400";
+      default:
+        return "bg-slate-100 text-slate-700 border border-slate-400";
+    }
+  }
+
   switch (status) {
     case "Em análise":
       return "bg-amber-500/10 text-amber-300 border border-amber-500/40";
@@ -56,8 +77,12 @@ function statusBadgeClass(status) {
   }
 }
 
-function categoryBadgeClass() {
-  return "bg-overlay text-textmain border border-borderSubtle";
+function categoryBadgeClass(appearance = "dark") {
+  if (appearance === "light") {
+    return "bg-white text-slate-800 border border-slate-300 shadow-sm";
+  }
+
+  return "bg-slate-950/80 text-slate-100 border border-white/10";
 }
 
 function formatarResumoEngajamento(totalReforcos, totalAtualizacoes) {
@@ -72,6 +97,8 @@ function formatarResumoEngajamento(totalReforcos, totalAtualizacoes) {
 export default function PainelPublico() {
   const navigate = useNavigate();
   const { city } = useContext(ThemeContext);
+  const { appearance } = useAppearance();
+  const isLight = appearance === "light";  
   const theme = CITY_THEMES[city] ?? CITY_THEMES.default;
   const location = useLocation();
 
@@ -89,6 +116,34 @@ export default function PainelPublico() {
   const authUser = getAuthUser();
   const currentUserId = authUser?.id || null;
   const isAutenticado = !!currentUserId;
+
+  const panelBoxClass = isLight
+    ? "rounded-2xl border border-slate-300/80 bg-white/75 p-4 space-y-4 shadow-sm shadow-slate-900/5"
+    : "rounded-2xl border border-white/10 bg-surfaceLight/40 p-4 space-y-4 shadow-sm shadow-black/20";
+
+  const segmentedGroupClass = isLight
+    ? "inline-flex rounded-lg border border-slate-300 bg-white/70 overflow-hidden"
+    : "inline-flex rounded-lg border border-white/10 bg-surface/60 overflow-hidden";
+
+  const segmentedActiveClass = isLight
+    ? "bg-primary/15 text-textmain font-semibold"
+    : "bg-primary/20 text-white font-semibold";
+
+  const segmentedInactiveClass = isLight
+    ? "bg-transparent text-textmuted hover:bg-white/80"
+    : "bg-transparent text-textmuted hover:bg-white/10";
+
+  const demandCardClass = isLight
+    ? "rounded-2xl border border-slate-300/80 bg-white/80 p-4 shadow-sm shadow-slate-900/5 transition hover:border-primary/40 hover:shadow-md"
+    : "rounded-2xl border border-white/10 bg-surfaceLight/45 p-4 shadow-sm shadow-black/20 transition hover:border-primary/40 hover:bg-surfaceLight/60";
+
+  const subtleButtonClass = isLight
+    ? "px-3 py-2 rounded-lg border border-slate-300 bg-white/70 text-xs text-textmain hover:bg-white hover:border-primary/30 transition"
+    : "px-3 py-2 rounded-lg border border-white/10 bg-white/5 text-xs text-textmain hover:bg-white/10 hover:border-primary/30 transition";
+
+  const emptyStateClass = isLight
+    ? "rounded-2xl border border-slate-300/80 bg-white/80 p-6 shadow-sm shadow-slate-900/5"
+    : "rounded-2xl border border-white/10 bg-surfaceLight/30 p-6";
 
   useEffect(() => {
     const load = () => {
@@ -286,9 +341,9 @@ export default function PainelPublico() {
             </span>
             
             <div className="flex flex-wrap items-center gap-2">
-              <PulseButton onClick={() => navigate("/registrar")} intense>
+              <PrimaryButton onClick={() => navigate("/registrar")} intense>
                 Registrar um problema
-              </PulseButton>
+              </PrimaryButton>
 
               <BackButton to="/" />
             </div>
@@ -301,21 +356,21 @@ export default function PainelPublico() {
         </div>
 
         {/* Barra de filtros */}
-        <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/40 p-4 space-y-4">
+        <div className={panelBoxClass}>
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-textmuted">Visualização:</span>
 
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm text-textmuted">Ordenar por:</span>
 
-              <div className="inline-flex rounded-lg border border-surfaceLight overflow-hidden">
+            <div className={segmentedGroupClass}>
                 <button
                   type="button"
                   onClick={() => setOrdenacao("recentes")}
                   className={`px-3 py-2 text-sm transition ${
                     ordenacao === "recentes"
-                      ? "bg-surface text-textmain"
-                      : "bg-transparent text-textmuted hover:bg-surfaceLight/40"
+                      ? segmentedActiveClass
+                      : segmentedInactiveClass
                   }`}
                 >
                   Mais recentes
@@ -332,8 +387,8 @@ export default function PainelPublico() {
                   }}
                   className={`px-3 py-2 text-sm transition ${
                     ordenacao === "proximas"
-                      ? "bg-surface text-textmain"
-                      : "bg-transparent text-textmuted hover:bg-surfaceLight/40"
+                      ? segmentedActiveClass
+                      : segmentedInactiveClass
                   }`}
                 >
                   Mais próximas
@@ -365,14 +420,14 @@ export default function PainelPublico() {
           )}
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex rounded-lg border border-surfaceLight overflow-hidden">
+            <div className={segmentedGroupClass}>
               <button
                 type="button"
                 onClick={() => setScope("minhas")}
                 className={`px-3 py-2 text-sm transition ${
                   scope === "minhas"
-                    ? "bg-surface text-textmain"
-                    : "bg-transparent text-textmuted hover:bg-surfaceLight/40"
+                  ? "bg-primary/15 text-textmain font-semibold"
+                  : "bg-transparent text-textmuted hover:bg-overlayHover"
                 }`}
               >
                 Suas demandas
@@ -383,8 +438,8 @@ export default function PainelPublico() {
                 onClick={() => setScope("cidade")}
                 className={`px-3 py-2 text-sm transition ${
                   scope === "cidade"
-                    ? "bg-surface text-textmain"
-                    : "bg-transparent text-textmuted hover:bg-surfaceLight/40"
+                    ? segmentedActiveClass
+                    : segmentedInactiveClass
                 }`}
               >
                 Nesta cidade
@@ -395,8 +450,8 @@ export default function PainelPublico() {
                 onClick={() => setScope("todas")}
                 className={`px-3 py-2 text-sm transition ${
                   scope === "todas"
-                    ? "bg-surface text-textmain"
-                    : "bg-transparent text-textmuted hover:bg-surfaceLight/40"
+                    ? segmentedActiveClass
+                    : segmentedInactiveClass
                 }`}
               >
                 Todas
@@ -468,7 +523,7 @@ export default function PainelPublico() {
                 setStatus("Todos");
                 setBusca("");
               }}
-              className="px-3 py-2 rounded-lg border border-surfaceLight text-xs text-textmain hover:bg-surfaceLight/40 transition"
+              className={subtleButtonClass}
             >
               Limpar filtros
             </button>
@@ -495,14 +550,14 @@ export default function PainelPublico() {
               return (
                 <article
                   key={d.id}
-                  className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 backdrop-blur-sm p-4"
+                  className={demandCardClass}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${categoryBadgeClass(d.categoria)}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${categoryBadgeClass(appearance)}`}>
                         {d.categoria}
                       </span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${statusBadgeClass(d.status)}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${statusBadgeClass(d.status, appearance)}`}>
                         {d.status}
                       </span>
                       <span className="text-xs text-textmuted">
@@ -586,7 +641,7 @@ export default function PainelPublico() {
                     {/* DIREITA: CTA */}
                     <button
                       type="button"
-                      className="px-3 py-2 rounded-lg border border-surfaceLight text-xs text-textmain hover:bg-surfaceLight/40 transition"
+                      className={subtleButtonClass}
                       onClick={() => navigate(`/painel/${d.id}`)}
                     >
                       Ver detalhes

@@ -1,4 +1,6 @@
+import { useAppearance } from "../context/AppearanceContext.jsx";
 import EvidenceGrid from "./EvidenceGrid";
+
 
 export default function EvidenciasPicker({
   evidenciasRef,
@@ -20,6 +22,8 @@ export default function EvidenciasPicker({
   containerClassName = "",
   acaoSecundaria = null,
 }) {
+  const { appearance } = useAppearance();
+  const isLight = appearance === "light";  
   const hasFotos =
     Array.isArray(fotosPreviewUrls) && fotosPreviewUrls.length > 0;
 
@@ -41,15 +45,26 @@ export default function EvidenciasPicker({
   }
 
   const containerClasses = [
-    "rounded-2xl border p-5 transition",
-    "bg-surfaceLight/15",
-    fotosSelecionadas.length === 0
-      ? "border-amber-500/40"
-      : "border-borderSubtle",
+    "rounded-2xl border p-5 transition shadow-sm",
+    isLight
+      ? "bg-white/80 border-slate-300/80 shadow-slate-900/5"
+      : "bg-surfaceLight/30 border-white/15 shadow-black/20",
     containerClassName,
   ]
     .filter(Boolean)
     .join(" ");
+
+  const captureButtonClass = isLight
+    ? "border-slate-300 bg-white/80 text-textmain hover:bg-white hover:border-primary/30"
+    : "border-white/10 bg-white/5 text-textmain hover:bg-white/10 hover:border-primary/30";
+
+  const detectedLocationClass = isLight
+    ? "rounded-xl border border-emerald-400 bg-emerald-50 px-4 py-3"
+    : "rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3";
+
+  const removeButtonClass = isLight
+    ? "w-full text-xs py-2 text-slate-700 bg-white/80 hover:bg-white transition"
+    : "w-full text-xs py-2 text-textmain bg-white/5 hover:bg-white/10 transition";    
 
   const content = (
     <div
@@ -88,9 +103,8 @@ export default function EvidenciasPicker({
             className={[
               "inline-flex items-center justify-center gap-2",
               "px-4 py-2 rounded-lg border",
-              "border-borderSubtle bg-overlay text-textmain",
-              "hover:bg-overlayHover transition",
-              "text-sm font-medium",
+              "transition text-sm font-medium",
+              captureButtonClass,
             ].join(" ")}
           >
             Capturar evidência
@@ -102,7 +116,7 @@ export default function EvidenciasPicker({
         </div>
 
         {withEnderecoDetectado && enderecoDetectado && (
-          <div className="rounded-xl border border-emerald-400/60 bg-emerald-500/10 px-4 py-3">
+          <div className={detectedLocationClass}>
             <p className="text-sm font-semibold text-textmain">
               Local detectado
             </p>
@@ -124,7 +138,7 @@ export default function EvidenciasPicker({
               <button
                 type="button"
                 onClick={() => onRemoveFoto(idx)}
-                className="w-full text-xs py-2 text-textmain bg-overlay hover:bg-overlayHover transition"
+                className={removeButtonClass}
               >
                 Remover
               </button>

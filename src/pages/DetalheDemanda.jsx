@@ -3,6 +3,7 @@
 import { useContext, useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ThemeContext } from "../context/ThemeContext";
+import { useAppearance } from "../context/AppearanceContext.jsx";
 import { adicionarEventoHistorico, getDemandas } from "../storage/demandasStorage";
 import { normalizarDemandas, reforcarDemanda } from "../services/demandasActions";
 import EvidenceGrid from "../components/EvidenceGrid";
@@ -18,7 +19,26 @@ function formatDateBR(iso) {
   return `${d}/${m}/${y}`;
 }
 
-function statusBadgeClass(status) {
+function statusBadgeClass(status, appearance = "dark") {
+  const isLight = appearance === "light";
+
+  if (isLight) {
+    switch (status) {
+      case "Em análise":
+        return "bg-amber-100 text-amber-800 border border-amber-400";
+      case "Encaminhada":
+        return "bg-sky-100 text-sky-800 border border-sky-400";
+      case "Resposta contestada":
+        return "bg-orange-100 text-orange-800 border border-orange-400";
+      case "Resolvida":
+        return "bg-emerald-100 text-emerald-800 border border-emerald-400";
+      case "Encerrada":
+        return "bg-violet-100 text-violet-800 border border-violet-400";
+      default:
+        return "bg-slate-100 text-slate-700 border border-slate-400";
+    }
+  }
+
   switch (status) {
     case "Em análise":
       return "bg-amber-500/10 text-amber-300 border border-amber-500/40";
@@ -35,7 +55,23 @@ function statusBadgeClass(status) {
   }
 }
 
-function tipoBadge(tipo) {
+function tipoBadge(tipo, appearance = "dark") {
+  const isLight = appearance === "light";
+
+  if (isLight) {
+    switch (String(tipo || "").toLowerCase()) {
+      case "sistema":
+        return "bg-slate-100 text-slate-700 border border-slate-300";
+      case "cidadao":
+        return "bg-cyan-100 text-cyan-800 border border-cyan-300";
+      case "responsavel":
+      case "orgao":
+        return "bg-fuchsia-100 text-fuchsia-800 border border-fuchsia-300";
+      default:
+        return "bg-slate-100 text-slate-700 border border-slate-300";
+    }
+  }
+
   switch (String(tipo || "").toLowerCase()) {
     case "sistema":
       return "bg-slate-500/10 text-slate-200 border border-slate-500/30";
@@ -46,6 +82,30 @@ function tipoBadge(tipo) {
       return "bg-fuchsia-500/10 text-fuchsia-200 border border-fuchsia-500/30";
     default:
       return "bg-slate-500/10 text-slate-200 border border-slate-500/30";
+  }
+}
+
+function respostaStatusBadgeClass(status, appearance = "dark") {
+  const isLight = appearance === "light";
+
+  if (isLight) {
+    switch (status) {
+      case "contestada":
+        return "border border-amber-400 bg-amber-100 text-amber-800";
+      case "aceita":
+        return "border border-emerald-400 bg-emerald-100 text-emerald-800";
+      default:
+        return "border border-slate-300 bg-slate-100 text-slate-700";
+    }
+  }
+
+  switch (status) {
+    case "contestada":
+      return "border border-amber-500/40 bg-amber-500/10 text-amber-200";
+    case "aceita":
+      return "border border-emerald-500/40 bg-emerald-500/10 text-emerald-200";
+    default:
+      return "border border-slate-500/30 bg-slate-500/10 text-slate-200";
   }
 }
 
@@ -245,6 +305,8 @@ function fileToDataUrl(file) {
 export default function DetalheDemanda() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { appearance } = useAppearance();
+  const isLight = appearance === "light";  
 
   // Mantemos ThemeContext apenas para manter consistência global (se necessário).
   // Porém, a tela prioriza SEMPRE a cidade da demanda.
@@ -258,6 +320,54 @@ export default function DetalheDemanda() {
   const authUser = getAuthUser();
   const currentUserId = authUser?.id || null;
   const isAutenticado = !!currentUserId;
+
+  const sectionCardClass = isLight
+    ? "rounded-2xl border border-slate-300/80 bg-white/80 p-5 space-y-4 shadow-sm shadow-slate-900/5"
+    : "rounded-2xl border border-white/10 bg-surfaceLight/30 p-5 space-y-4 shadow-sm shadow-black/20";
+
+  const sectionCardCompactClass = isLight
+    ? "rounded-2xl border border-slate-300/80 bg-white/80 p-5 space-y-3 shadow-sm shadow-slate-900/5"
+    : "rounded-2xl border border-white/10 bg-surfaceLight/30 p-5 space-y-3 shadow-sm shadow-black/20";
+
+  const innerCardClass = isLight
+    ? "rounded-xl border border-slate-300 bg-white/90 p-4 space-y-2 shadow-sm shadow-slate-900/5"
+    : "rounded-xl border border-white/10 bg-white/5 p-4 space-y-2";
+
+  const timelineItemClass = isLight
+    ? "rounded-xl border border-slate-300 bg-white/90 p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2 shadow-sm shadow-slate-900/5"
+    : "rounded-xl border border-white/10 bg-white/5 p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2";
+
+  const responseItemClass = isLight
+    ? "rounded-xl border border-slate-300 bg-white/90 p-3 space-y-2 shadow-sm shadow-slate-900/5"
+    : "rounded-xl border border-white/10 bg-white/5 p-3 space-y-2";
+
+  const smallBadgeClass = isLight
+    ? "px-2 py-1 rounded-full border border-slate-300 bg-white text-slate-800"
+    : "px-2 py-1 rounded-full border border-white/10 bg-white/5 text-textmain";
+
+  const subtlePillClass = isLight
+    ? "px-2 py-0.5 rounded-full border border-slate-300 bg-white text-slate-700"
+    : "px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-textmain";
+
+  const subtleButtonClass = isLight
+    ? "px-4 py-2 rounded-xl border border-slate-300 bg-white/80 text-sm text-textmain hover:bg-white hover:border-primary/30 transition"
+    : "px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-textmain hover:bg-white/10 hover:border-primary/30 transition";
+
+  const miniButtonClass = isLight
+    ? "px-3 py-1.5 rounded-lg border border-slate-300 bg-white/80 text-xs text-textmain hover:bg-white hover:border-primary/30 transition"
+    : "px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs text-textmain hover:bg-white/10 hover:border-primary/30 transition";
+
+  const nestedSoftBoxClass = isLight
+    ? "rounded-xl border border-slate-300 bg-slate-50/90 p-3"
+    : "rounded-xl border border-white/10 bg-white/5 p-3";  
+
+  const acceptButtonClass = isLight
+    ? "min-w-[88px] px-3 py-1.5 rounded-lg border border-emerald-400 bg-emerald-100 text-emerald-800 text-xs hover:bg-emerald-200 transition"
+    : "min-w-[88px] px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 text-xs hover:bg-emerald-500/20 transition";
+
+  const contestButtonClass = isLight
+    ? "min-w-[88px] px-3 py-1.5 rounded-lg border border-amber-400 bg-amber-100 text-amber-800 text-xs hover:bg-amber-200 transition"
+    : "min-w-[88px] px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-200 text-xs hover:bg-amber-500/20 transition";    
 
   useEffect(() => {
     const load = () => setDemandasBase(normalizarDemandas(getDemandas()));
@@ -798,13 +908,14 @@ export default function DetalheDemanda() {
             </h1>
 
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="px-2 py-1 rounded-full border border-borderSubtle bg-overlay text-textmain">
+              <span className={smallBadgeClass}>
                 {demanda.id}
               </span>
 
               <span
                 className={`px-2 py-1 rounded-full ${statusBadgeClass(
-                  demanda.status
+                  demanda.status,
+                  appearance
                 )}`}
               >
                 {demanda.status}
@@ -816,7 +927,7 @@ export default function DetalheDemanda() {
         </div>
 
         {/* Card principal (resumo) */}
-        <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 backdrop-blur-sm p-5 space-y-4">
+        <div className={sectionCardClass}>
 
           {/* Header do box */}
           <div className="flex flex-col gap-3">
@@ -827,7 +938,7 @@ export default function DetalheDemanda() {
                 Resumo da demanda
               </h2>
 
-              <span className="px-2 py-1 rounded-full bg-overlay text-textmain border border-borderSubtle text-xs">
+              <span className={`${smallBadgeClass} text-xs`}>
                 {demanda.categoria}
               </span>
             </div>
@@ -876,7 +987,7 @@ export default function DetalheDemanda() {
         </div>
 
         {/* Galeria (evidências) */}
-        <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/15 p-5 space-y-3">
+        <div className={sectionCardCompactClass}>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3">
               <h2 className="text-lg font-semibold">Evidências</h2>
@@ -933,21 +1044,21 @@ export default function DetalheDemanda() {
         </div>
 
         {/* Mobilização cidadã */}
-        <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 p-5 space-y-4">
+        <div className={sectionCardClass}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <h2 className="text-lg font-semibold">Mobilização cidadã</h2>
             {podeReforcar ? (
               <button
                 type="button"
                 onClick={handleReforcarDemanda}
-                className="px-4 py-2 rounded-xl border border-borderSubtle bg-overlay text-sm text-textmain hover:bg-overlayHover transition"
+                className={subtleButtonClass}
               >
                 Reforçar demanda
               </button>
             ) : null}
           </div>
 
-          <div className="rounded-xl border border-borderSubtle bg-overlay p-4 space-y-2">
+          <div className={innerCardClass}>
             <p className="text-sm text-textmain">{resumoMobilizacao}</p>
 
             {totalReforcos > 0 ? (
@@ -994,21 +1105,22 @@ export default function DetalheDemanda() {
 
         {/* Histórico */}
         {!fluxoAtualizacaoAtivo ? (
-          <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 p-5 space-y-3">
+          <div className={sectionCardCompactClass}>
             <h2 className="text-lg font-semibold">Histórico</h2>
             {Array.isArray(demanda.historico) && demanda.historico.length ? (
               <div className="space-y-3">
                 {demanda.historico.map((h, idx) => (
                   <div
                     key={`${h.data}-${idx}`}
-                    className="rounded-xl border border-borderSubtle bg-overlay p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2"
+                    className={timelineItemClass}
                   >
                     <div className="flex items-center gap-2 text-xs">
                       <span className="text-textmuted">{formatDateBR(h.data)}</span>
                       {h.tipo && (
                         <span
                           className={`px-2 py-0.5 rounded-full ${tipoBadge(
-                            h.tipo
+                            h.tipo,
+                            appearance
                           )}`}
                         >
                           {tipoLabel(h.tipo)}
@@ -1031,7 +1143,7 @@ export default function DetalheDemanda() {
 
         {/* Resposta do responsável */}
         {!fluxoAtualizacaoAtivo ? (
-          <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 p-5 space-y-3">
+          <div className={sectionCardCompactClass}>
             <h2 className="text-lg font-semibold">Resposta do responsável</h2>
 
             {respostasResponsavel.length ? (
@@ -1049,7 +1161,7 @@ export default function DetalheDemanda() {
                   return (
                     <div
                       key={`${r.data}-${idx}`}
-                      className="rounded-xl border border-borderSubtle bg-overlay p-3 space-y-2"
+                      className={responseItemClass}
                     >
                       {isContestando ? (
                         <div className="space-y-3">
@@ -1062,7 +1174,7 @@ export default function DetalheDemanda() {
                             </p>
                           </div>
 
-                          <div className="rounded-xl border border-borderSubtle bg-surfaceLight/10 p-3">
+                          <div className={nestedSoftBoxClass}>
                             <p className="text-xs text-textmuted mb-1">
                               Resposta recebida:
                             </p>
@@ -1088,7 +1200,7 @@ export default function DetalheDemanda() {
                               <button
                                 type="button"
                                 onClick={() => handleEnviarContestacao(idx)}
-                                className="min-w-[88px] px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 text-xs hover:bg-emerald-500/20 transition"
+                                className={acceptButtonClass}
                               >
                                 Enviar
                               </button>
@@ -1099,7 +1211,7 @@ export default function DetalheDemanda() {
                                   setContestandoRespostaIdx(null);
                                   setTextoContestacao("");
                                 }}
-                                className="min-w-[88px] px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-200 text-xs hover:bg-amber-500/20 transition"
+                                className={contestButtonClass}
                               >
                                 Cancelar
                               </button>
@@ -1114,11 +1226,11 @@ export default function DetalheDemanda() {
                             </span>
 
                             {r.protocolo ? (
-                              <span className="px-2 py-0.5 rounded-full bg-overlay text-textmain border border-borderSubtle">
+                              <span className={subtlePillClass}>
                                 {r.protocolo}
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-full border border-borderSubtle bg-overlay text-textmuted">
+                              <span className={subtlePillClass}>
                                 Sem protocolo
                               </span>
                             )}
@@ -1130,7 +1242,12 @@ export default function DetalheDemanda() {
 
                           {r.statusCidadao === "aceita" ? (
                             <div className="pt-2 border-t border-borderSubtle">
-                              <span className="inline-flex px-2 py-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 text-xs">
+                              <span
+                                className={`inline-flex px-2 py-1 rounded-full text-xs ${respostaStatusBadgeClass(
+                                  "aceita",
+                                  appearance
+                                )}`}
+                              >
                                 Resposta aceita pelo cidadão
                               </span>
                             </div>
@@ -1138,12 +1255,17 @@ export default function DetalheDemanda() {
 
                           {r.statusCidadao === "contestada" ? (
                             <div className="pt-2 border-t border-borderSubtle space-y-2">
-                              <span className="inline-flex px-2 py-1 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-200 text-xs">
+                              <span
+                                className={`inline-flex px-2 py-1 rounded-full text-xs ${respostaStatusBadgeClass(
+                                  "contestada",
+                                  appearance
+                                )}`}
+                              >
                                 Resposta contestada pelo cidadão
                               </span>
 
                               {r.contestacao?.texto ? (
-                                <div className="rounded-xl border border-borderSubtle bg-surfaceLight/10 p-3">
+                                <div className={nestedSoftBoxClass}>
                                   <p className="text-xs text-textmuted mb-1">
                                     Motivo da contestação:
                                   </p>
@@ -1167,7 +1289,7 @@ export default function DetalheDemanda() {
                                     <button
                                       type="button"
                                       onClick={() => handleAceitarResposta(idx)}
-                                      className="min-w-[88px] px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 text-xs hover:bg-emerald-500/20 transition"
+                                      className={acceptButtonClass}
                                     >
                                       Aceitar
                                     </button>
@@ -1178,7 +1300,7 @@ export default function DetalheDemanda() {
                                         setContestandoRespostaIdx(idx);
                                         setTextoContestacao("");
                                       }}
-                                      className="min-w-[88px] px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-200 text-xs hover:bg-amber-500/20 transition"
+                                      className={contestButtonClass}
                                     >
                                       Contestar
                                     </button>
@@ -1218,7 +1340,7 @@ export default function DetalheDemanda() {
                 ) : null}
 
                 {cicloRespostasEncerrado ? (
-                  <div className="rounded-xl border border-borderSubtle bg-surfaceLight/10 p-3 space-y-1">
+                  <div className={`${nestedSoftBoxClass} space-y-1`}>
                     <p className="text-sm text-textmain font-medium">
                       Ciclo de respostas encerrado no MVP.
                     </p>
