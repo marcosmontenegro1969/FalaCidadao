@@ -14,6 +14,9 @@ export default function AtualizacoesProblemaCard({
   isAutenticado = false,
   jaAtualizou = false,
   podeAtualizarProblema = false,
+  demandaBloqueadaParaMovimentacao = false,
+  mensagemBloqueioMovimentacao = "",  
+  demandaComRespostaContestada = false,
   totalAtualizacoes = 0,
   atualizacoes = [],
   localOriginal = { lat: null, lng: null },
@@ -26,7 +29,11 @@ export default function AtualizacoesProblemaCard({
 }) {
   const hasAtualizacoes = totalAtualizacoes > 0;
 
-  const resumoAtualizacoes = jaAtualizou
+const resumoAtualizacoes = demandaBloqueadaParaMovimentacao
+  ? mensagemBloqueioMovimentacao.includes("resolvida")
+    ? "Demanda resolvida."
+    : "Demanda encerrada."
+  : jaAtualizou
   ? "Você atualizou esta demanda."
   : totalAtualizacoes === 0
   ? "Nenhuma atualização registrada até o momento."
@@ -402,23 +409,23 @@ export default function AtualizacoesProblemaCard({
     <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 p-5 space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h2 className="text-lg font-semibold">Atualizações do problema</h2>
-        {!isAutenticado && flowStep !== "evidencia" ? (
-          <button
-            type="button"
-            onClick={onEntrarParaAtualizar}
-            className="px-4 py-2 rounded-xl border border-borderSubtle bg-overlay text-sm text-textmain hover:bg-overlayHover transition"
-          >
-            Entrar para atualizar
-          </button>
-        ) : podeAtualizarProblema && flowStep !== "evidencia" ? (
-          <button
-            type="button"
-            onClick={handleAbrirFluxo}
-            className="px-4 py-2 rounded-xl border border-borderSubtle bg-overlay text-sm text-textmain hover:bg-overlayHover transition"
-          >
-            Nova atualização
-          </button>
-        ) : null}
+          {demandaBloqueadaParaMovimentacao ? null : !isAutenticado && flowStep !== "evidencia" ? (
+            <button
+              type="button"
+              onClick={onEntrarParaAtualizar}
+              className="px-4 py-2 rounded-xl border border-borderSubtle bg-overlay text-sm text-textmain hover:bg-overlayHover transition"
+            >
+              Entrar para atualizar
+            </button>
+          ) : podeAtualizarProblema && flowStep !== "evidencia" ? (
+            <button
+              type="button"
+              onClick={handleAbrirFluxo}
+              className="px-4 py-2 rounded-xl border border-borderSubtle bg-overlay text-sm text-textmain hover:bg-overlayHover transition"
+            >
+              Nova atualização
+            </button>
+          ) : null}
       </div>
       {!podeAtualizarProblema ? (
         <div className="rounded-xl border border-borderSubtle bg-overlay p-4 space-y-2">
@@ -427,13 +434,26 @@ export default function AtualizacoesProblemaCard({
               {resumoAtualizacoes}
             </p>
 
-            {!hasAtualizacoes ? (
+            {demandaComRespostaContestada && !demandaBloqueadaParaMovimentacao ? (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+                <p className="text-xs text-amber-200 leading-relaxed">
+                  Esta demanda está com resposta contestada. Use a atualização apenas para
+                  registrar nova evidência objetiva do problema no local.
+                </p>
+              </div>
+            ) : null}            
+
+            {demandaBloqueadaParaMovimentacao ? (
+              <p className="text-xs text-textmuted">
+                {mensagemBloqueioMovimentacao}
+              </p>
+            ) : !hasAtualizacoes ? (
               <p className="text-xs text-textmuted">
                 Atualizações exigem nova evidência.
               </p>
             ) : null}
 
-            {!isAutenticado ? (
+            {!demandaBloqueadaParaMovimentacao && !isAutenticado ? (
               <p className="text-xs text-textmuted">
                 Entre para atualizar esta demanda com uma nova evidência.
               </p>

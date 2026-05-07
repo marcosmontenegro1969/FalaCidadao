@@ -420,10 +420,32 @@ export default function DetalheDemanda() {
     isAutenticado &&
     reforcos.some((item) => item?.autorId === currentUserId);
 
-  const podeReforcar =
-    !!demanda && isAutenticado && !isAutorOriginal && !jaReforcou;
+  const statusDemanda = demanda?.status || "";
 
-  const podeAtualizarProblema = !!demanda && isAutenticado;
+  const demandaBloqueadaParaMovimentacao =
+    statusDemanda === "Resolvida" || statusDemanda === "Encerrada";
+
+  const demandaComRespostaContestada =
+    statusDemanda === "Resposta contestada";
+
+  const mensagemBloqueioMovimentacao =
+    statusDemanda === "Resolvida"
+      ? "Esta demanda foi marcada como resolvida e não aceita novos reforços ou atualizações."
+      : statusDemanda === "Encerrada"
+      ? "Esta demanda foi encerrada e não aceita novas movimentações cidadãs."
+      : "";    
+
+  const podeReforcar =
+    !!demanda &&
+    isAutenticado &&
+    !isAutorOriginal &&
+    !jaReforcou &&
+    !demandaBloqueadaParaMovimentacao;
+
+  const podeAtualizarProblema =
+    !!demanda &&
+    isAutenticado &&
+    !demandaBloqueadaParaMovimentacao;
 
   const atualizacoes = Array.isArray(demanda?.atualizacoes)
   ? demanda.atualizacoes
@@ -500,7 +522,11 @@ useEffect(() => {
     demanda?.ultimoReforcoEm?.slice?.(0, 10) || demanda?.ultimoReforcoEm
   );
 
-  const resumoMobilizacao = jaReforcou
+  const resumoMobilizacao = demandaBloqueadaParaMovimentacao
+    ? statusDemanda === "Resolvida"
+      ? "Demanda resolvida."
+      : "Demanda encerrada."
+    : jaReforcou
     ? "Você já reforçou esta demanda."
     : totalReforcos === 0
     ? "Esta demanda ainda não recebeu reforços de outros cidadãos."
@@ -1167,7 +1193,7 @@ useEffect(() => {
         <div className={sectionCardClass}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <h2 className="text-lg font-semibold">Mobilização cidadã</h2>
-            {!isAutenticado ? (
+            {demandaBloqueadaParaMovimentacao ? null : !isAutenticado ? (
               <button
                 type="button"
                 onClick={handleEntrarParaReforcar}
@@ -1189,7 +1215,7 @@ useEffect(() => {
           <div className={innerCardClass}>
             <p className="text-sm text-textmain">{resumoMobilizacao}</p>
 
-            {totalReforcos > 0 ? (
+            {demandaBloqueadaParaMovimentacao ? null : totalReforcos > 0 ? (
               <p className="text-xs text-textmuted">
                 Último reforço registrado em: {ultimoReforco}
               </p>
@@ -1199,7 +1225,11 @@ useEffect(() => {
               </p>
             )}
 
-            {!isAutenticado ? (
+            {demandaBloqueadaParaMovimentacao ? (
+              <p className="text-xs text-textmuted">
+                {mensagemBloqueioMovimentacao}
+              </p>
+            ) : !isAutenticado ? (
               <p className="text-xs text-textmuted">
                 Faça login para participar da mobilização desta demanda.
               </p>
@@ -1220,6 +1250,9 @@ useEffect(() => {
           isAutenticado={isAutenticado}
           jaAtualizou={jaAtualizou}
           podeAtualizarProblema={podeAtualizarProblema}
+          demandaBloqueadaParaMovimentacao={demandaBloqueadaParaMovimentacao}
+          mensagemBloqueioMovimentacao={mensagemBloqueioMovimentacao}
+          demandaComRespostaContestada={demandaComRespostaContestada}
           totalAtualizacoes={Array.isArray(demanda.atualizacoes) ? demanda.atualizacoes.length : 0}
           atualizacoes={Array.isArray(demanda.atualizacoes) ? demanda.atualizacoes : []}
           localOriginal={{
