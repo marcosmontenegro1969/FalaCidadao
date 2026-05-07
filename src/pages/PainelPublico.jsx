@@ -16,7 +16,6 @@ const STATUSES = [
   "Todos",
   "Em análise",
   "Encaminhada",
-  "Resposta contestada",
   "Resolvida",
   "Encerrada",
 ];
@@ -110,6 +109,325 @@ function formatarResumoEngajamento(totalReforcos, totalAtualizacoes) {
     totalAtualizacoes === 1 ? "atualização" : "atualizações";
 
   return `${totalReforcos} ${reforcoLabel} • ${totalAtualizacoes} ${atualizacaoLabel}`;
+}
+
+function normalizarTexto(value) {
+  if (value === null || value === undefined) return "";
+
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+    } catch {
+      return "";
+    }
+  }
+
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function getTextoEvento(evento) {
+  return normalizarTexto(
+    evento?.texto ||
+      evento?.descricao ||
+      evento?.mensagem ||
+      evento?.titulo ||
+      evento?.label ||
+      evento?.acao ||
+      evento?.tipoEvento ||
+      evento
+  );
+}
+
+function getHistoricoDemanda(demanda) {
+  if (Array.isArray(demanda?.historico)) return demanda.historico;
+  if (Array.isArray(demanda?.history)) return demanda.history;
+  if (Array.isArray(demanda?.eventos)) return demanda.eventos;
+
+  return [];
+}
+
+function ehRespostaDoResponsavel(evento) {
+  const tipo = normalizarTexto(evento?.tipo || evento?.origem || evento?.autor);
+  const texto = getTextoEvento(evento);
+
+  const ehEventoDoResponsavel =
+    tipo.includes("responsavel") ||
+    tipo.includes("orgao") ||
+    tipo.includes("órgão");
+
+  const textoIndicaRespostaDoResponsavel =
+    texto.includes("primeira resposta") ||
+    texto.includes("segunda resposta") ||
+    texto.includes("nova resposta do responsavel") ||
+    texto.includes("nova resposta do responsável") ||
+    texto.includes("resposta do responsavel") ||
+    texto.includes("resposta do responsável") ||
+    texto.includes("resposta de compesa") ||
+    texto.includes("resposta da compesa") ||
+    texto.includes("resposta de emlurb") ||
+    texto.includes("resposta da emlurb") ||
+    texto.includes("resposta de semob") ||
+    texto.includes("resposta da semob") ||
+    texto.includes("compesa informou") ||
+    texto.includes("emlurb informou") ||
+    texto.includes("semob informou");
+
+  const ehAvaliacaoDoCidadao =
+    texto.includes("aceita pelo cidadao") ||
+    texto.includes("aceita pelo cidadão") ||
+    texto.includes("aceito pelo cidadao") ||
+    texto.includes("aceito pelo cidadão") ||
+    texto.includes("contestada pelo cidadao") ||
+    texto.includes("contestada pelo cidadão") ||
+    texto.includes("contestacao do cidadao") ||
+    texto.includes("contestação do cidadão") ||
+    texto.includes("motivo da contestacao") ||
+    texto.includes("motivo da contestação");
+
+  return (ehEventoDoResponsavel || textoIndicaRespostaDoResponsavel) && !ehAvaliacaoDoCidadao;
+}
+
+function getRespostasResponsavel(demanda) {
+  const respostasDiretas = [];
+
+  if (Array.isArray(demanda?.respostasResponsavel)) {
+    respostasDiretas.push(...demanda.respostasResponsavel);
+  }
+
+  if (Array.isArray(demanda?.respostas)) {
+    respostasDiretas.push(...demanda.respostas);
+  }
+
+  if (respostasDiretas.length > 0) {
+    return respostasDiretas.filter(ehRespostaDoResponsavel);
+  }
+
+  const historico = getHistoricoDemanda(demanda);
+
+  return historico.filter(ehRespostaDoResponsavel);
+}
+
+function getTotalContestoes(demanda) {
+  const historico = getHistoricoDemanda(demanda);
+
+  const contestacoesHistorico = historico.filter((evento) => {
+    const texto = getTextoEvento(evento);
+
+    return (
+      texto.includes("contest") ||
+      texto.includes("resposta contestada") ||
+      texto.includes("contestada pelo cidadao") ||
+      texto.includes("contestada pelo cidadão") ||
+      texto.includes("motivo da contestacao") ||
+      texto.includes("motivo da contestação")
+    );
+  }).length;
+
+  const contestacoesRespostas = getRespostasResponsavel(demanda).filter((resposta) => {
+    const texto = getTextoEvento(resposta);
+    const status = normalizarTexto(resposta?.status);
+    const motivo = normalizarTexto(
+      resposta?.motivoContestacao ||
+        resposta?.motivoContestação ||
+        resposta?.contestacao ||
+        resposta?.contestação
+    );
+
+    return (
+      status.includes("contest") ||
+      motivo.includes("contest") ||
+      texto.includes("contest")
+    );
+  }).length;
+
+  return Math.max(contestacoesHistorico, contestacoesRespostas);
+}
+
+function getTotalRespostas(demanda) {
+  return getRespostasResponsavel(demanda).length;
+}
+
+function getStatusOperacional(demanda) {
+  const statusAtual = demanda?.status;
+
+  if (statusAtual === "Resolvida") return "Resolvida";
+  if (statusAtual === "Encerrada") return "Encerrada";
+  if (statusAtual === "Em análise") return "Em análise";
+
+  if (statusAtual === "Resposta contestada") return "Encaminhada";
+
+  if (statusAtual === "Encaminhada") return "Encaminhada";
+
+  const totalRespostas = getTotalRespostas(demanda);
+  const responsavelAtual = demanda?.responsavelAtual || demanda?.responsavel;
+
+  if (totalRespostas > 0 || responsavelAtual) return "Encaminhada";
+
+  return statusAtual || "Em análise";
+}
+
+function getSituacaoAcompanhamento(demanda) {
+  const statusOperacional = getStatusOperacional(demanda);
+  const totalRespostas = getTotalRespostas(demanda);
+  const totalContestoes = getTotalContestoes(demanda);
+
+  if (statusOperacional === "Resolvida") return "Solução aceita";
+  if (statusOperacional === "Encerrada") return "Ciclo encerrado";
+
+  if (statusOperacional === "Encaminhada") {
+    if (totalRespostas >= 2 && totalContestoes >= 1) return "Nova resposta recebida";
+    if (totalContestoes >= 1) return "Resposta contestada";
+    if (totalRespostas >= 1) return "Resposta recebida";
+
+    return "Aguardando resposta";
+  }
+
+  return null;
+}
+
+function acompanhamentoBadgeClass(situacao, appearance = "dark") {
+  const isLight = appearance === "light";
+
+  if (isLight) {
+    switch (situacao) {
+      case "Aguardando resposta":
+        return "bg-slate-100 text-slate-700 border border-slate-300";
+      case "Resposta recebida":
+        return "bg-blue-100 text-blue-800 border border-blue-300";
+      case "Resposta contestada":
+        return "bg-orange-100 text-orange-800 border border-orange-400";
+      case "Nova resposta recebida":
+        return "bg-cyan-100 text-cyan-800 border border-cyan-400";
+      case "Solução aceita":
+        return "bg-emerald-100 text-emerald-800 border border-emerald-400";
+      case "Ciclo encerrado":
+        return "bg-violet-100 text-violet-800 border border-violet-400";
+      default:
+        return "bg-slate-100 text-slate-700 border border-slate-300";
+    }
+  }
+
+  switch (situacao) {
+    case "Aguardando resposta":
+      return "bg-slate-500/10 text-slate-300 border border-slate-500/30";
+    case "Resposta recebida":
+      return "bg-blue-500/10 text-blue-300 border border-blue-500/40";
+    case "Resposta contestada":
+      return "bg-orange-500/10 text-orange-300 border border-orange-500/40";
+    case "Nova resposta recebida":
+      return "bg-cyan-500/10 text-cyan-300 border border-cyan-500/40";
+    case "Solução aceita":
+      return "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40";
+    case "Ciclo encerrado":
+      return "bg-violet-500/10 text-violet-300 border border-violet-500/40";
+    default:
+      return "bg-slate-500/10 text-slate-200 border border-slate-500/30";
+  }
+}
+
+function formatarResumoMobilizacao(totalReforcos, totalAtualizacoes) {
+  const reforcoLabel = totalReforcos === 1 ? "reforço" : "reforços";
+  const atualizacaoLabel =
+    totalAtualizacoes === 1 ? "atualização" : "atualizações";
+
+  return `Mobilização: ${totalReforcos} ${reforcoLabel} · ${totalAtualizacoes} ${atualizacaoLabel}`;
+}
+
+function formatarResumoAcompanhamento(totalRespostas, totalContestoes, situacao) {
+  if (!totalRespostas && !totalContestoes && !situacao) return null;
+
+  const partes = [];
+
+  if (totalRespostas > 0) {
+    partes.push(`${totalRespostas} ${totalRespostas === 1 ? "resposta" : "respostas"}`);
+  }
+
+  if (totalContestoes > 0) {
+    partes.push(`${totalContestoes} ${totalContestoes === 1 ? "contestação" : "contestações"}`);
+  }
+
+  if (situacao === "Solução aceita") {
+    partes.push("solução aceita");
+  }
+
+  if (situacao === "Ciclo encerrado") {
+    partes.push("ciclo encerrado");
+  }
+
+  if (partes.length === 0) return null;
+
+  return `Acompanhamento: ${partes.join(" · ")}`;
+}
+
+function getDataEvento(evento) {
+  return (
+    evento?.data ||
+    evento?.createdAt ||
+    evento?.date ||
+    evento?.timestamp ||
+    null
+  );
+}
+
+function getUltimaMovimentacao(demanda) {
+  const historico = getHistoricoDemanda(demanda);
+
+  if (!historico.length) return null;
+
+  const eventosComData = historico
+    .map((evento) => ({
+      ...evento,
+      _dataEvento: getDataEvento(evento),
+    }))
+    .filter((evento) => evento._dataEvento);
+
+  if (!eventosComData.length) return null;
+
+  const ultimo = [...eventosComData].sort((a, b) => {
+    return new Date(b._dataEvento).getTime() - new Date(a._dataEvento).getTime();
+  })[0];
+
+  const texto = getTextoEvento(ultimo);
+
+  let label = "movimentação";
+
+  if (texto.includes("resolvid")) label = "resolução";
+  else if (texto.includes("encerr")) label = "encerramento";
+  else if (texto.includes("contest")) label = "contestação";
+  else if (texto.includes("atualizacao") || texto.includes("atualização")) label = "atualização";
+  else if (texto.includes("reforc") || texto.includes("reforç")) label = "reforço";
+  else if (texto.includes("encaminh")) label = "encaminhamento";
+  else if (texto.includes("resposta") || texto.includes("manifestacao") || texto.includes("manifestação")) label = "resposta";
+
+  return {
+    label,
+    data: ultimo._dataEvento,
+  };
+}
+
+function formatarRodapeDatas(demanda) {
+  const ultimaMovimentacao = getUltimaMovimentacao(demanda);
+  const statusOperacional = getStatusOperacional(demanda);
+
+  if (statusOperacional === "Resolvida" && ultimaMovimentacao?.data) {
+    return `Registrada em: ${demanda.createdAt} · Resolvida em: ${ultimaMovimentacao.data}`;
+  }
+
+  if (statusOperacional === "Encerrada" && ultimaMovimentacao?.data) {
+    return `Registrada em: ${demanda.createdAt} · Encerrada em: ${ultimaMovimentacao.data}`;
+  }
+
+  if (ultimaMovimentacao?.data && ultimaMovimentacao.data !== demanda.createdAt) {
+    return `Registrada em: ${demanda.createdAt} · Última movimentação: ${ultimaMovimentacao.label} em ${ultimaMovimentacao.data}`;
+  }
+
+  return `Registrada em: ${demanda.createdAt}`;
 }
 
 export default function PainelPublico() {
@@ -272,7 +590,7 @@ export default function PainelPublico() {
       }
 
       if (categoria !== "Todas" && d.categoria !== categoria) return false;
-      if (status !== "Todos" && d.status !== status) return false;
+      if (status !== "Todos" && getStatusOperacional(d) !== status) return false;
 
       if (!q) return true;
 
@@ -462,7 +780,9 @@ export default function PainelPublico() {
               </div>
 
               <span className="text-[11px] text-textmuted">
-                (MVP: proximidade usará sua localização no dispositivo.)
+                {ordenacao === "proximas"
+                  ? "Ordenado pela distância até você."
+                  : "Ordenado pela data de registro."}
               </span>
             </div>
           </div>
@@ -613,6 +933,16 @@ export default function PainelPublico() {
               const bairroExibido = d.enderecoDetectado?.bairro || d.bairro || "";
               const totalReforcos = Number(d.totalReforcos ?? d.reforcos?.length ?? 0);
               const totalAtualizacoes = Number(d.totalAtualizacoes ?? d.atualizacoes?.length ?? 0);
+              const statusOperacional = getStatusOperacional(d);
+              const situacaoAcompanhamento = getSituacaoAcompanhamento(d);
+              const totalRespostas = getTotalRespostas(d);
+              const totalContestoes = getTotalContestoes(d);
+              const resumoAcompanhamento = formatarResumoAcompanhamento(
+                totalRespostas,
+                totalContestoes,
+                situacaoAcompanhamento
+              );
+
               return (
                 <article
                   key={d.id}
@@ -623,9 +953,15 @@ export default function PainelPublico() {
                       <span className={`px-2 py-0.5 rounded-full text-xs ${categoryBadgeClass(appearance)}`}>
                         {d.categoria}
                       </span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${statusBadgeClass(d.status, appearance)}`}>
-                        {d.status}
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${statusBadgeClass(statusOperacional, appearance)}`}>
+                        {statusOperacional}
                       </span>
+
+                      {situacaoAcompanhamento && (
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${acompanhamentoBadgeClass(situacaoAcompanhamento, appearance)}`}>
+                          {situacaoAcompanhamento}
+                        </span>
+                      )}
                       <span className="text-xs text-textmuted">
                         {bairroExibido} ·{" "}
                         {CITY_THEMES[d.cidadeRelato || d.cidade]?.cidadeShort ?? (d.cidadeRelato || d.cidade)}
@@ -656,9 +992,17 @@ export default function PainelPublico() {
                       </span>
                     </div>
                   </div>
-                  <p className="mt-3 text-xs sm:text-sm text-textmuted font-medium">
-                    {formatarResumoEngajamento(totalReforcos, totalAtualizacoes)}
-                  </p>
+                  <div className="mt-3 space-y-1">
+                    <p className="text-xs sm:text-sm text-textmuted font-medium">
+                      {formatarResumoMobilizacao(totalReforcos, totalAtualizacoes)}
+                    </p>
+
+                    {resumoAcompanhamento && (
+                      <p className="text-xs sm:text-sm text-textsoft">
+                        {resumoAcompanhamento}
+                      </p>
+                    )}
+                  </div>
                   <p className="mt-3 text-textmain">{d.descricao}</p>
 
                   {/* Rodapé do card: metadata + miniaturas + botão */}
@@ -666,7 +1010,7 @@ export default function PainelPublico() {
                     {/* ESQUERDA: data + (opcional) miniaturas */}
                     <div className="flex flex-wrap items-end gap-3">
                       <span className="text-xs text-textmuted">
-                        Registrada em: {d.createdAt}
+                        {formatarRodapeDatas(d)}
                         {(() => {
                           const donoDaDemanda = d.autorId || d.userId || null;
                           return isAutenticado && donoDaDemanda === currentUserId;

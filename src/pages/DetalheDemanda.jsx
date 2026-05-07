@@ -1512,11 +1512,11 @@ useEffect(() => {
                 {cicloRespostasEncerrado ? (
                   <div className={`${nestedSoftBoxClass} space-y-1`}>
                     <p className="text-sm text-textmain font-medium">
-                      Ciclo de respostas encerrado no MVP.
+              Ciclo de respostas encerrado.
                     </p>
 
                     <p className="text-xs text-textmuted leading-relaxed">
-                      Esta demanda já recebeu duas manifestações do responsável. Novas rodadas de resposta não estão disponíveis nesta versão.
+                      Esta demanda já recebeu as manifestações registradas do responsável e não possui novas rodadas de resposta abertas.
                     </p>
                   </div>
                 ) : null}                
