@@ -7,6 +7,7 @@ export default function BotoesAcaoRegistro({
   confirmarAtualizacao,
   confirmarNovo,
   resetTotal,
+  voltarParaOpcoes,
   podeReforcar,
   podeAdicionarAtualizacao,
   podeRegistrarNovo,
@@ -61,8 +62,10 @@ export default function BotoesAcaoRegistro({
         </PrimaryButton>
       )}
 
-      <SecondaryActionButton onClick={resetTotal}>
-        Cancelar registro
+      <SecondaryActionButton
+        onClick={acaoEscolhida === "reforcar" ? voltarParaOpcoes : resetTotal}
+      >
+        {acaoEscolhida === "reforcar" ? "Voltar às opções" : "Cancelar registro"}
       </SecondaryActionButton>
     </div>
   );

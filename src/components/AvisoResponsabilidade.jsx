@@ -5,6 +5,8 @@ const textosPorContexto = {
     "Ao registrar esta ocorrência, você confirma que as informações e imagens enviadas correspondem de boa-fé ao problema observado no local.",
   atualizacao:
     "Ao atualizar esta ocorrência, você confirma que as novas informações e imagens correspondem de boa-fé ao estado atual do problema no local.",
+  reforco:
+    "Ao reforçar esta demanda, você confirma que observou o problema no local informado e que seu reforço corresponde de boa-fé à situação encontrada.",
 };
 
 export default function AvisoResponsabilidade({

@@ -12,6 +12,7 @@ import EvidenceGrid from "./EvidenceGrid";
 
 export default function AtualizacoesProblemaCard({
   isAutenticado = false,
+  jaAtualizou = false,
   podeAtualizarProblema = false,
   totalAtualizacoes = 0,
   atualizacoes = [],
@@ -20,8 +21,19 @@ export default function AtualizacoesProblemaCard({
   onSalvarAtualizacao,
   onFluxoAtualizacaoChange,
   onAbrirFotoAtualizacao,
+  onEntrarParaAtualizar,
+  abrirAtualizacaoAutomaticamente = false,
 }) {
   const hasAtualizacoes = totalAtualizacoes > 0;
+
+  const resumoAtualizacoes = jaAtualizou
+  ? "Você atualizou esta demanda."
+  : totalAtualizacoes === 0
+  ? "Nenhuma atualização registrada até o momento."
+  : totalAtualizacoes === 1
+  ? "1 atualização cidadã registrada."
+  : `${totalAtualizacoes} atualizações cidadãs registradas.`;
+
   const atualizacoesOrdenadas = Array.isArray(atualizacoes)
     ? [...atualizacoes].sort(
         (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
@@ -53,6 +65,20 @@ export default function AtualizacoesProblemaCard({
       onFluxoAtualizacaoChange?.(false);
     };
   }, [onFluxoAtualizacaoChange]);  
+
+  useEffect(() => {
+  if (!abrirAtualizacaoAutomaticamente) return;
+  if (!isAutenticado) return;
+  if (!podeAtualizarProblema) return;
+  if (flowStep === "evidencia") return;
+
+  handleAbrirFluxo();
+}, [
+  abrirAtualizacaoAutomaticamente,
+  isAutenticado,
+  podeAtualizarProblema,
+  flowStep,
+]);
 
   function handleAbrirFluxo() {
     setFlowStep("evidencia");
@@ -376,8 +402,15 @@ export default function AtualizacoesProblemaCard({
     <div className="rounded-2xl border border-surfaceLight bg-surfaceLight/20 p-5 space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h2 className="text-lg font-semibold">Atualizações do problema</h2>
-
-        {podeAtualizarProblema && flowStep !== "evidencia" ? (
+        {!isAutenticado && flowStep !== "evidencia" ? (
+          <button
+            type="button"
+            onClick={onEntrarParaAtualizar}
+            className="px-4 py-2 rounded-xl border border-borderSubtle bg-overlay text-sm text-textmain hover:bg-overlayHover transition"
+          >
+            Entrar para atualizar
+          </button>
+        ) : podeAtualizarProblema && flowStep !== "evidencia" ? (
           <button
             type="button"
             onClick={handleAbrirFluxo}
@@ -389,49 +422,40 @@ export default function AtualizacoesProblemaCard({
       </div>
       {!podeAtualizarProblema ? (
         <div className="rounded-xl border border-borderSubtle bg-overlay p-4 space-y-2">
-        
-          {!hasAtualizacoes ? (
-            <>
-              <p className="text-sm text-textmain">
-                Nenhuma atualização registrada até o momento.
-              </p>
+          <>
+            <p className="text-sm font-medium text-textmain">
+              {resumoAtualizacoes}
+            </p>
 
+            {!hasAtualizacoes ? (
               <p className="text-xs text-textmuted">
                 Atualizações exigem nova evidência.
               </p>
+            ) : null}
 
-              {!isAutenticado ? (
-                <p className="text-xs text-textmuted">
-                  Faça login para atualizar esta demanda.
-                </p>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <p className="text-sm text-textmain">
-                {totalAtualizacoes} atualização(ões) registrada(s).
-              </p>
-
+            {!isAutenticado ? (
               <p className="text-xs text-textmuted">
-                A listagem detalhada será conectada nas próximas etapas.
+                Entre para atualizar esta demanda com uma nova evidência.
               </p>
-            </>
-          )}
+            ) : null}
+          </>
         </div>
       ) : (
 
         <div className="rounded-xl border border-borderSubtle bg-overlay p-4 space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-wrap items-center gap-4">
-              {!hasAtualizacoes ? (
-                <p className="text-sm text-textmain">
-                  Nenhuma atualização registrada até o momento.
+              <p className="text-sm font-medium text-textmain">
+                {resumoAtualizacoes}
+              </p>
+
+              {jaAtualizou && totalAtualizacoes > 0 ? (
+                <p className="text-xs text-textmuted">
+                  {totalAtualizacoes === 1
+                    ? "Mobilização total: 1 atualização cidadã registrada."
+                    : `Mobilização total: ${totalAtualizacoes} atualizações cidadãs registradas.`}
                 </p>
-              ) : (
-                <p className="text-sm text-textmain">
-                  {totalAtualizacoes} atualização(ões) registrada(s).
-                </p>
-              )}
+              ) : null}
             </div>
 
             {updateFotosSelecionadas.length > 0 ? (
@@ -627,9 +651,9 @@ export default function AtualizacoesProblemaCard({
                   onClick={handleEnviarAtualizacao}
                   disabled={!podeEnviarAtualizacao}
                   className={[
-                    "px-6 py-2 rounded-xl border text-sm font-medium transition whitespace-nowrap",
+                    "px-6 py-2 rounded-xl border text-sm font-semibold transition whitespace-nowrap",
                     podeEnviarAtualizacao
-                      ? "border-borderSubtle bg-overlay text-textmain hover:bg-overlayHover"
+                      ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30 hover:border-emerald-300"
                       : "border-borderSubtle bg-overlay text-textmuted opacity-50 cursor-not-allowed",
                   ].join(" ")}
                 >

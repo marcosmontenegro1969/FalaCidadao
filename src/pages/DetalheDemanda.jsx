@@ -1,8 +1,8 @@
 // src/pages/DetalheDemanda.jsx
 
 import { useContext, useMemo, useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ThemeContext } from "../context/ThemeContext";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { CityContext } from "../context/CityContext";
 import { useAppearance } from "../context/AppearanceContext.jsx";
 import { adicionarEventoHistorico, getDemandas } from "../storage/demandasStorage";
 import { normalizarDemandas, reforcarDemanda } from "../services/demandasActions";
@@ -304,22 +304,47 @@ function fileToDataUrl(file) {
 
 export default function DetalheDemanda() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
+
   const { appearance } = useAppearance();
   const isLight = appearance === "light";  
 
-  // Mantemos ThemeContext apenas para manter consistência global (se necessário).
+  // Mantemos CityContext apenas para manter consistência global (se necessário).
   // Porém, a tela prioriza SEMPRE a cidade da demanda.
-  useContext(ThemeContext);
+  useContext(CityContext);
 
   const [demandasBase, setDemandasBase] = useState([]);
   const [alertOverlay, setAlertOverlay] = useState(null);
+  const [confirmacaoReforcoAberta, setConfirmacaoReforcoAberta] = useState(false);
+  const [toastReforco, setToastReforco] = useState(null);
+  const [abrirAtualizacaoAutomaticamente, setAbrirAtualizacaoAutomaticamente] = useState(false);
   const [fluxoAtualizacaoAtivo, setFluxoAtualizacaoAtivo] = useState(false);
   const [contestandoRespostaIdx, setContestandoRespostaIdx] = useState(null);
   const [textoContestacao, setTextoContestacao] = useState("");  
   const authUser = getAuthUser();
   const currentUserId = authUser?.id || null;
   const isAutenticado = !!currentUserId;
+  const params = new URLSearchParams(location.search);
+  const abaPainel = params.get("aba");
+  const ordemPainel = params.get("ordem");
+
+  const abaValida = ["minhas", "cidade", "todas"].includes(abaPainel);
+  const ordemValida = ["recentes", "proximas"].includes(ordemPainel);
+
+  const painelParams = new URLSearchParams();
+
+  if (abaValida) {
+    painelParams.set("aba", abaPainel);
+  }
+
+  if (ordemValida) {
+    painelParams.set("ordem", ordemPainel);
+  }
+
+  const painelBackTo = painelParams.toString()
+    ? `/painel?${painelParams.toString()}`
+    : "/painel";
 
   const sectionCardClass = isLight
     ? "rounded-2xl border border-slate-300/80 bg-white/80 p-5 space-y-4 shadow-sm shadow-slate-900/5"
@@ -400,6 +425,71 @@ export default function DetalheDemanda() {
 
   const podeAtualizarProblema = !!demanda && isAutenticado;
 
+  const atualizacoes = Array.isArray(demanda?.atualizacoes)
+  ? demanda.atualizacoes
+  : [];
+
+  const jaAtualizou =
+    !!demanda &&
+    isAutenticado &&
+    atualizacoes.some(
+      (item) =>
+        item?.autorId === currentUserId ||
+        item?.autorEmail === authUser?.email ||
+        item?.autorId === authUser?.email
+    );
+
+  useEffect(() => {
+  if (!demanda) return;
+  if (!isAutenticado) return;
+  if (!podeReforcar) return;
+
+  const params = new URLSearchParams(location.search);
+
+  if (params.get("acao") !== "reforcar") return;
+
+  setConfirmacaoReforcoAberta(true);
+
+  params.delete("acao");
+
+  navigate(
+    {
+      pathname: location.pathname,
+      search: params.toString() ? `?${params.toString()}` : "",
+    },
+    { replace: true }
+  );
+}, [demanda, isAutenticado, podeReforcar, location.pathname, location.search, navigate]);  
+
+useEffect(() => {
+  if (!demanda) return;
+  if (!isAutenticado) return;
+  if (!podeAtualizarProblema) return;
+
+  const params = new URLSearchParams(location.search);
+
+  if (params.get("acao") !== "atualizar") return;
+
+  setAbrirAtualizacaoAutomaticamente(true);
+
+  params.delete("acao");
+
+  navigate(
+    {
+      pathname: location.pathname,
+      search: params.toString() ? `?${params.toString()}` : "",
+    },
+    { replace: true }
+  );
+}, [
+  demanda,
+  isAutenticado,
+  podeAtualizarProblema,
+  location.pathname,
+  location.search,
+  navigate,
+]);
+
   // Mobilização cidadã
   const totalReforcos =
     typeof demanda?.totalReforcos === "number"
@@ -410,12 +500,13 @@ export default function DetalheDemanda() {
     demanda?.ultimoReforcoEm?.slice?.(0, 10) || demanda?.ultimoReforcoEm
   );
 
-  const resumoMobilizacao =
-    totalReforcos === 0
-      ? "Esta demanda ainda não recebeu reforços de outros cidadãos."
-      : totalReforcos === 1
-      ? "1 cidadão já reforçou esta demanda."
-      : `${totalReforcos} cidadãos já reforçaram esta demanda.`;
+  const resumoMobilizacao = jaReforcou
+    ? "Você já reforçou esta demanda."
+    : totalReforcos === 0
+    ? "Esta demanda ainda não recebeu reforços de outros cidadãos."
+    : totalReforcos === 1
+    ? "1 cidadão já reforçou esta demanda."
+    : `${totalReforcos} cidadãos já reforçaram esta demanda.`;
   
   // Modal de foto
   const [modalOpen, setModalOpen] = useState(false);
@@ -434,7 +525,7 @@ export default function DetalheDemanda() {
             Não localizamos a demanda{" "}
             <span className="text-textmain">{id}</span>.
           </p>
-          <BackButton to="/painel" />
+          <BackButton to={painelBackTo} />
         </div>
       </section>
     );
@@ -571,24 +662,53 @@ export default function DetalheDemanda() {
     setModalOpen(false);
   }
 
+  function handleEntrarParaReforcar() {
+    const params = new URLSearchParams(location.search);
+
+    params.set("acao", "reforcar");
+
+    const redirectTo = `${location.pathname}?${params.toString()}`;
+
+    navigate(`/entrar?redirect=${encodeURIComponent(redirectTo)}`);
+  }
+
+  function handleEntrarParaAtualizar() {
+    const params = new URLSearchParams(location.search);
+
+    params.set("acao", "atualizar");
+
+    const redirectTo = `${location.pathname}?${params.toString()}`;
+
+    navigate(`/entrar?redirect=${encodeURIComponent(redirectTo)}`);
+  }  
+
   function handleReforcarDemanda() {
     if (!demanda?.id) return;
 
     const result = reforcarDemanda({ demandaAlvoId: demanda.id });
 
     if (!result.ok) {
+      setConfirmacaoReforcoAberta(false);
+
       setAlertOverlay({
         title: "Não foi possível reforçar",
         message: result.message || "Tente novamente.",
+        actionLabel: "Fechar",
       });
+
       return;
     }
 
-    setAlertOverlay({
-      title: "Você reforçou esta demanda",
-      message: "Seu reforço foi registrado e esta demanda ganhou mais força no painel.",
-      actionLabel: "Fechar",
+    setConfirmacaoReforcoAberta(false);
+
+    setToastReforco({
+      title: "Reforço registrado",
+      message: "Esta demanda ganhou mais força no painel.",
     });
+
+    window.setTimeout(() => {
+      setToastReforco(null);
+    }, 2000);
   }
   
   function prevFoto() {
@@ -923,7 +1043,7 @@ export default function DetalheDemanda() {
             </div>
 
           </div>
-          <BackButton to="/painel" />
+          <BackButton to={painelBackTo} />  
         </div>
 
         {/* Card principal (resumo) */}
@@ -1047,10 +1167,18 @@ export default function DetalheDemanda() {
         <div className={sectionCardClass}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <h2 className="text-lg font-semibold">Mobilização cidadã</h2>
-            {podeReforcar ? (
+            {!isAutenticado ? (
               <button
                 type="button"
-                onClick={handleReforcarDemanda}
+                onClick={handleEntrarParaReforcar}
+                className={subtleButtonClass}
+              >
+                Entrar para reforçar
+              </button>
+            ) : podeReforcar ? (
+              <button
+                type="button"
+                onClick={() => setConfirmacaoReforcoAberta(true)}
                 className={subtleButtonClass}
               >
                 Reforçar demanda
@@ -1090,6 +1218,7 @@ export default function DetalheDemanda() {
         {/* Atualizações do problema */}
         <AtualizacoesProblemaCard
           isAutenticado={isAutenticado}
+          jaAtualizou={jaAtualizou}
           podeAtualizarProblema={podeAtualizarProblema}
           totalAtualizacoes={Array.isArray(demanda.atualizacoes) ? demanda.atualizacoes.length : 0}
           atualizacoes={Array.isArray(demanda.atualizacoes) ? demanda.atualizacoes : []}
@@ -1099,8 +1228,16 @@ export default function DetalheDemanda() {
           }}
           onAviso={(payload) => setAlertOverlay(payload)}
           onSalvarAtualizacao={handleSalvarAtualizacao}
-          onFluxoAtualizacaoChange={setFluxoAtualizacaoAtivo}
+          onFluxoAtualizacaoChange={(ativo) => {
+            setFluxoAtualizacaoAtivo(ativo);
+
+            if (ativo) {
+              setAbrirAtualizacaoAutomaticamente(false);
+            }
+          }}
           onAbrirFotoAtualizacao={openModalAtualizacao}
+          onEntrarParaAtualizar={handleEntrarParaAtualizar}
+          abrirAtualizacaoAutomaticamente={abrirAtualizacaoAutomaticamente}
         />
 
         {/* Histórico */}
@@ -1387,13 +1524,59 @@ export default function DetalheDemanda() {
         onPrev={prevFoto}
         onNext={nextFoto}
       />
-      <AlertOverlay
-        open={!!alertOverlay}
-        title={alertOverlay?.title}
-        message={alertOverlay?.message}
-        actionLabel={alertOverlay?.actionLabel}
-        onClose={() => setAlertOverlay(null)}
-      />      
+      {confirmacaoReforcoAberta ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-borderSubtle bg-surface p-5 shadow-xl space-y-4">
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold text-textmain">
+                Reforçar esta demanda?
+              </h2>
+
+              <p className="text-sm text-textmuted leading-relaxed">
+                Ao confirmar, você informa que este problema também foi observado por você
+                ou continua relevante para a comunidade.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmacaoReforcoAberta(false)}
+                className={subtleButtonClass}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={handleReforcarDemanda}
+                className={acceptButtonClass}
+              >
+                Confirmar reforço
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}     
+        {toastReforco ? (
+          <div className="fixed bottom-6 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-4 py-3 shadow-lg backdrop-blur">
+            <p className="text-sm font-semibold text-emerald-100">
+              {toastReforco.title}
+            </p>
+
+            <p className="text-xs text-emerald-100/80">
+              {toastReforco.message}
+            </p>
+          </div>
+        ) : null}      
+       
+        <AlertOverlay
+          open={!!alertOverlay}
+          title={alertOverlay?.title}
+          message={alertOverlay?.message}
+          actionLabel={alertOverlay?.actionLabel}
+          onClose={() => setAlertOverlay(null)}
+        />      
     </section>
   );
 }

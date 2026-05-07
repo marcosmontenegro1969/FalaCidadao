@@ -5,7 +5,7 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 // Context/tema
-import { ThemeContext } from "../context/ThemeContext";
+import { CityContext } from "../context/CityContext";
 import { useAppearance } from "../context/AppearanceContext.jsx";
 import { CITY_THEMES } from "../theme/cities";
 
@@ -53,7 +53,7 @@ const PRE_LOGIN_DRAFT_KEY = "falaCidadao.preLoginDraft";
 export default function RegistrarProblema() {
   const navigate = useNavigate();
 
-  const { city } = useContext(ThemeContext);
+  const { city } = useContext(CityContext);
   const { appearance } = useAppearance();
   const isLight = appearance === "light";
   const actionPanelClass = isLight
@@ -518,6 +518,12 @@ export default function RegistrarProblema() {
     setDemandaAlvoId(null);
   }
 
+  function voltarParaOpcoes() {
+    setAcaoEscolhida(null);
+    setDemandaAlvoId(null);
+    setAceiteResponsabilidade(false);
+  }  
+
   function cancelarAposSugestao() {
     resetTotal();
     showToast("info", "Registro cancelado.");
@@ -793,6 +799,8 @@ export default function RegistrarProblema() {
     setCameraModalOpen(false);
   }
 
+  const modoConsultaEvidencias = acaoEscolhida === "reforcar";
+
   const evidenciasValidas =
     fotosSelecionadas.length >= 1 && fotosSelecionadas.length <= 3;
 
@@ -819,6 +827,13 @@ export default function RegistrarProblema() {
     sugestoesVisiveis.length > 0 &&
     acaoEscolhida === null;
 
+  const demandaAlvo = useMemo(() => {
+    if (!demandaAlvoId) return null;
+    return demandasBase.find((demanda) => demanda.id === demandaAlvoId) || null;
+  }, [demandasBase, demandaAlvoId]);
+
+
+
   return (
     <section className="flex-1 w-full">
       <div className="w-full max-w-5xl mx-auto px-4 py-10 space-y-6">
@@ -841,7 +856,9 @@ export default function RegistrarProblema() {
               Registrar um problema
             </h1>
             <p className="text-textsoft text-sm leading-relaxed max-w-2xl">
-              Envie até 3 fotos tiradas no local do problema para validar a ocorrência.
+              {acaoEscolhida === "reforcar"
+                ? "A foto capturada foi usada para localizar o problema e verificar demandas parecidas."
+                : "Envie até 3 fotos tiradas no local do problema para validar a ocorrência."}
             </p>
           </div>
           <BackButton to="/" />
@@ -850,9 +867,9 @@ export default function RegistrarProblema() {
 
         {(acaoEscolhida === null ||
           acaoEscolhida === "novo" ||
-          acaoEscolhida === "atualizar") && (
+          acaoEscolhida === "atualizar" ||
+          acaoEscolhida === "reforcar") && (
           <>
-
             <EvidenciasPicker
               evidenciasRef={evidenciasRef}
               fotosPickRef={fotosPickRef}
@@ -863,10 +880,10 @@ export default function RegistrarProblema() {
               onOpenCamera={() => setCameraModalOpen(true)}
               onRemoveFoto={removeFotoAt}
               enderecoDetectado={enderecoDetectado}
+              modoConsulta={modoConsultaEvidencias}
             />
           </>
         )}
-
         {mostrarPainelSugestoes && (
           <SugestoesDemandas
             sugestoes={sugestoesVisiveis}
@@ -895,6 +912,53 @@ export default function RegistrarProblema() {
                 setPontoReferencia={setPontoReferencia}
               />
             )}
+
+            {acaoEscolhida === "reforcar" && (
+              <div className={actionPanelClass}>
+                <div className="space-y-3">
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      Reforçar demanda existente
+                    </h2>
+
+                    <p className="mt-2 text-sm leading-relaxed text-textsoft">
+                      Você está prestes a reforçar uma demanda já registrada neste local.
+                      Seu reforço ajuda a mostrar que este problema também foi observado
+                      por você e continua relevante para a comunidade.
+                    </p>
+                  </div>
+
+                  {demandaAlvo && (
+                    <div className="rounded-xl border border-white/10 bg-background/30 p-3 text-sm">
+                      <p className="text-xs text-textsoft mb-1">
+                        Demanda selecionada para reforço
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full border border-white/15 px-2 py-1 text-xs">
+                          {demandaAlvo.id}
+                        </span>
+
+                        <span className="text-textsoft text-xs">
+                          {demandaAlvo.categoria}
+                          {demandaAlvo.enderecoDetectado?.bairro
+                            ? ` · ${demandaAlvo.enderecoDetectado.bairro}`
+                            : ""}
+                        </span>
+                      </div>
+
+                      <p className="mt-2 font-semibold">
+                        {demandaAlvo.titulo || demandaAlvo.descricao || "Demanda registrada"}
+                      </p>
+
+                      <p className="mt-1 text-xs text-textsoft">
+                        A foto capturada ajudou a identificar esta demanda existente. Ao confirmar, registraremos apenas seu reforço cidadão, sem anexar nova foto.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}            
             {acaoEscolhida === "novo" && (
               <FormNovoRegistro
                 descricaoRef={descricaoRef}
@@ -917,19 +981,26 @@ export default function RegistrarProblema() {
               <AvisoResponsabilidade
                 checked={aceiteResponsabilidade}
                 onChange={setAceiteResponsabilidade}
-                contexto={acaoEscolhida === "atualizar" ? "atualizacao" : "demanda"}
+                contexto={
+                  acaoEscolhida === "atualizar"
+                    ? "atualizacao"
+                    : acaoEscolhida === "reforcar"
+                      ? "reforco"
+                      : "demanda"
+                }
               />
-              <BotoesAcaoRegistro
-                acaoEscolhida={acaoEscolhida}
-                confirmarReforco={confirmarReforco}
-                confirmarAtualizacao={confirmarAtualizacao}
-                confirmarNovo={confirmarNovo}
-                resetTotal={resetTotal}
-                podeReforcar={podeReforcar}
-                podeAdicionarAtualizacao={podeAdicionarAtualizacao}
-                podeRegistrarNovo={podeRegistrarNovo}
-                isProcessing={isProcessing}
-              />
+                <BotoesAcaoRegistro
+                  acaoEscolhida={acaoEscolhida}
+                  confirmarReforco={confirmarReforco}
+                  confirmarAtualizacao={confirmarAtualizacao}
+                  confirmarNovo={confirmarNovo}
+                  resetTotal={resetTotal}
+                  voltarParaOpcoes={voltarParaOpcoes}
+                  podeReforcar={podeReforcar}
+                  podeAdicionarAtualizacao={podeAdicionarAtualizacao}
+                  podeRegistrarNovo={podeRegistrarNovo}
+                  isProcessing={isProcessing}
+                />
             </div>
           </>
         )}

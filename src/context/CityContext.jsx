@@ -1,4 +1,4 @@
-/* ThemeContext
+/* CityContext
  *
  * Este arquivo define um contexto global do React responsável por:
  * - Armazenar a cidade atualmente selecionada
@@ -13,9 +13,9 @@ import { createContext, useEffect, useState } from "react";
 const INITIAL_CITY = "recife";
 const CITY_STORAGE_KEY = "falaCidadao.city";
 
-export const ThemeContext = createContext(null);
+export const CityContext = createContext(null);
 
-export function ThemeProvider({ children }) {
+export function CityProvider({ children }) {
   // ✅ Inicializa lendo do localStorage (se existir)
   const [city, setCity] = useState(() => {
     try {
@@ -40,8 +40,8 @@ export function ThemeProvider({ children }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ city, changeCity }}>
+    <CityContext.Provider value={{ city, changeCity }}>
       {children}
-    </ThemeContext.Provider>
+    </CityContext.Provider>
   );
 }

@@ -21,6 +21,7 @@ export default function EvidenciasPicker({
   showContainer = true,
   containerClassName = "",
   acaoSecundaria = null,
+  modoConsulta = false,
 }) {
   const { appearance } = useAppearance();
   const isLight = appearance === "light";  
@@ -38,11 +39,21 @@ export default function EvidenciasPicker({
   function getHelperText() {
     const n = fotosSelecionadas.length;
 
+    if (modoConsulta) {
+      return "Imagem mantida apenas para conferência desta etapa.";
+    }
+
     if (n === 0) return emptyMessage;
     if (n >= 1 && n <= maxFotos) return `${n} foto(s) selecionada(s).`;
 
     return `Remova fotos para ficar no máximo de ${maxFotos}.`;
   }
+
+  const tituloEfetivo = modoConsulta
+    ? "Evidência usada para localização"
+    : title;
+
+  const mostrarContadorEfetivo = modoConsulta ? false : showCounter;
 
   const containerClasses = [
     "rounded-2xl border p-5 transition shadow-sm",
@@ -79,15 +90,15 @@ export default function EvidenciasPicker({
           hasFotos ? "lg:max-w-[330px]" : "max-w-xl",
         ].join(" ")}
       >
-        {(showTitle || showCounter) && (
+        {(showTitle || mostrarContadorEfetivo) && (
           <div className="flex items-center justify-between gap-3">
             {showTitle ? (
-              <h2 className="text-lg font-semibold">{title}</h2>
+              <h2 className="text-lg font-semibold">{tituloEfetivo}</h2>
             ) : (
               <div />
             )}
 
-            {showCounter ? (
+            {mostrarContadorEfetivo ? (
               <span className="text-xs text-textmuted whitespace-nowrap">
                 {fotosSelecionadas.length}/{maxFotos} selecionada(s)
               </span>
@@ -96,21 +107,23 @@ export default function EvidenciasPicker({
         )}
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            ref={fotosPickRef}
-            type="button"
-            onClick={onOpenCamera}
-            className={[
-              "inline-flex items-center justify-center gap-2",
-              "px-4 py-2 rounded-lg border",
-              "transition text-sm font-medium",
-              captureButtonClass,
-            ].join(" ")}
-          >
-            Capturar evidência
-          </button>
+          {!modoConsulta && (
+            <button
+              ref={fotosPickRef}
+              type="button"
+              onClick={onOpenCamera}
+              className={[
+                "inline-flex items-center justify-center gap-2",
+                "px-4 py-2 rounded-lg border",
+                "transition text-sm font-medium",
+                captureButtonClass,
+              ].join(" ")}
+            >
+              Capturar evidência
+            </button>
+          )}
 
-          {acaoSecundaria}
+          {!modoConsulta && acaoSecundaria}
 
           <div className="text-sm text-textmuted">{getHelperText()}</div>
         </div>
@@ -134,15 +147,19 @@ export default function EvidenciasPicker({
           <EvidenceGrid
             fotos={fotosPreviewUrls}
             fotosMeta={fotosMeta}
-            renderFooter={(idx) => (
-              <button
-                type="button"
-                onClick={() => onRemoveFoto(idx)}
-                className={removeButtonClass}
-              >
-                Remover
-              </button>
-            )}
+            renderFooter={
+              modoConsulta
+                ? undefined
+                : (idx) => (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveFoto(idx)}
+                      className={removeButtonClass}
+                    >
+                      Remover
+                    </button>
+                  )
+            }
           />
         </div>
       ) : null}

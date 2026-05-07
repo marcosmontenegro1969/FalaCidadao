@@ -2,7 +2,7 @@
 
 import { useContext, useMemo, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ThemeContext } from "../context/ThemeContext";
+import { CityContext } from "../context/CityContext";
 import { useAppearance } from "../context/AppearanceContext.jsx";
 import { CITY_THEMES } from "../theme/cities";
 import { getDemandas } from "../storage/demandasStorage";
@@ -22,6 +22,24 @@ const STATUSES = [
 ];
 
 const AUTH_KEY = "falaCidadao.auth";
+
+const SCOPES_VALIDOS = ["minhas", "cidade", "todas"];
+
+function getScopeFromSearch(search) {
+  const params = new URLSearchParams(search);
+  const aba = params.get("aba");
+
+  return SCOPES_VALIDOS.includes(aba) ? aba : null;
+}
+
+const ORDENACOES_VALIDAS = ["recentes", "proximas"];
+
+function getOrdenacaoFromSearch(search) {
+  const params = new URLSearchParams(search);
+  const ordem = params.get("ordem");
+
+  return ORDENACOES_VALIDAS.includes(ordem) ? ordem : null;
+}
 
 function getAuthUser() {
   try {
@@ -96,13 +114,15 @@ function formatarResumoEngajamento(totalReforcos, totalAtualizacoes) {
 
 export default function PainelPublico() {
   const navigate = useNavigate();
-  const { city } = useContext(ThemeContext);
+  const { city } = useContext(CityContext);
   const { appearance } = useAppearance();
   const isLight = appearance === "light";  
   const theme = CITY_THEMES[city] ?? CITY_THEMES.default;
   const location = useLocation();
 
-  const initialScope = location.state?.view === "todas" ? "todas" : "cidade";
+  const initialScope =
+    getScopeFromSearch(location.search) ||
+    (location.state?.view === "todas" ? "todas" : "cidade");
 
   const [scope, setScope] = useState(initialScope); // "minhas" | "cidade" | "todas"
   const [categoria, setCategoria] = useState("Todas");
@@ -110,9 +130,47 @@ export default function PainelPublico() {
   const [busca, setBusca] = useState("");
   const [demandasBase, setDemandasBase] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [ordenacao, setOrdenacao] = useState("recentes");
+  const [ordenacao, setOrdenacao] = useState(
+  getOrdenacaoFromSearch(location.search) || "recentes"
+);
   const [userLocation, setUserLocation] = useState(null);
   const [locationStatus, setLocationStatus] = useState("idle");
+
+  function alterarScope(nextScope) {
+  if (!SCOPES_VALIDOS.includes(nextScope)) return;
+
+  setScope(nextScope);
+
+  const params = new URLSearchParams(location.search);
+  params.set("aba", nextScope);
+
+  navigate(
+    {
+      pathname: "/painel",
+      search: `?${params.toString()}`,
+    },
+    { replace: true }
+  );
+}
+
+  function alterarOrdenacao(nextOrdenacao) {
+    if (!ORDENACOES_VALIDAS.includes(nextOrdenacao)) return;
+
+    setOrdenacao(nextOrdenacao);
+
+    const params = new URLSearchParams(location.search);
+    params.set("aba", scope);
+    params.set("ordem", nextOrdenacao);
+
+    navigate(
+      {
+        pathname: "/painel",
+        search: `?${params.toString()}`,
+      },
+      { replace: true }
+    );
+  }
+
   const authUser = getAuthUser();
   const currentUserId = authUser?.id || null;
   const isAutenticado = !!currentUserId;
@@ -190,6 +248,14 @@ export default function PainelPublico() {
       );
     });
   }
+
+  useEffect(() => {
+  if (ordenacao !== "proximas") return;
+  if (userLocation) return;
+  if (locationStatus !== "idle") return;
+
+  solicitarLocalizacaoUsuario();
+}, [ordenacao, userLocation, locationStatus]);
 
   const demandasFiltradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -366,7 +432,7 @@ export default function PainelPublico() {
             <div className={segmentedGroupClass}>
                 <button
                   type="button"
-                  onClick={() => setOrdenacao("recentes")}
+                  onClick={() => alterarOrdenacao("recentes")}
                   className={`px-3 py-2 text-sm transition ${
                     ordenacao === "recentes"
                       ? segmentedActiveClass
@@ -379,7 +445,7 @@ export default function PainelPublico() {
                 <button
                   type="button"
                   onClick={async () => {
-                    setOrdenacao("proximas");
+                    alterarOrdenacao("proximas");
 
                     if (!userLocation) {
                       await solicitarLocalizacaoUsuario();
@@ -423,7 +489,7 @@ export default function PainelPublico() {
             <div className={segmentedGroupClass}>
               <button
                 type="button"
-                onClick={() => setScope("minhas")}
+                onClick={() => alterarScope("minhas")}
                 className={`px-3 py-2 text-sm transition ${
                   scope === "minhas"
                   ? "bg-primary/15 text-textmain font-semibold"
@@ -435,7 +501,7 @@ export default function PainelPublico() {
 
               <button
                 type="button"
-                onClick={() => setScope("cidade")}
+                onClick={() => alterarScope("cidade")}
                 className={`px-3 py-2 text-sm transition ${
                   scope === "cidade"
                     ? segmentedActiveClass
@@ -447,7 +513,7 @@ export default function PainelPublico() {
 
               <button
                 type="button"
-                onClick={() => setScope("todas")}
+                onClick={() => alterarScope("todas")}
                 className={`px-3 py-2 text-sm transition ${
                   scope === "todas"
                     ? segmentedActiveClass
@@ -518,7 +584,7 @@ export default function PainelPublico() {
             <button
               type="button"
               onClick={() => {
-                setScope("cidade");
+                alterarScope("cidade");
                 setCategoria("Todas");
                 setStatus("Todos");
                 setBusca("");
@@ -642,7 +708,7 @@ export default function PainelPublico() {
                     <button
                       type="button"
                       className={subtleButtonClass}
-                      onClick={() => navigate(`/painel/${d.id}`)}
+                      onClick={() => navigate(`/painel/${d.id}?aba=${scope}&ordem=${ordenacao}`)}
                     >
                       Ver detalhes
                     </button>

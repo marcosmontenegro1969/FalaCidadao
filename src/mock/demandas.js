@@ -2,7 +2,7 @@
 
 export const MOCK_DEMANDAS_EXISTENTES = [
   {
-    id: "DMD-2025-0001",
+    id: "DMD-2025-1216-0001",
 
     // NOVO (modelo atual)
     cidadeEmFoco: "recife",
@@ -41,9 +41,9 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     autorNome: "JOSE",
 
     fotos: [
-      "/mock/DMD-2025-0001-1.jpg",
-      "/mock/DMD-2025-0001-2.jpg",
-      "/mock/DMD-2025-0001-3.jpg",
+      "/mock/DMD-2025-1212-0001-1.jpg",
+      "/mock/DMD-2025-1212-0001-2.jpg",
+      "/mock/DMD-2025-1212-0001-3.jpg",
     ],
     impacto: { confirmacoes: 35, ultimaConfirmacao: "2025-12-16" },
     respostaResponsavel: [
@@ -94,7 +94,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
   },
 
   {
-    id: "DMD-2025-0004",
+    id: "DMD-2025-1211-0004",
 
     cidadeEmFoco: "recife",
     cidadeRelato: "recife",
@@ -131,9 +131,9 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     autorNome: "MARIA",
 
     fotos: [
-      "/mock/DMD-2025-0004-1.jpg",
-      "/mock/DMD-2025-0004-2.jpg",
-      "/mock/DMD-2025-0004-3.jpg",
+      "/mock/DMD-2025-1211-0004-1.jpg",
+      "/mock/DMD-2025-1211-0004-2.jpg",
+      "/mock/DMD-2025-1211-0004-3.jpg",
     ],
     impacto: { confirmacoes: 12, ultimaConfirmacao: "2025-12-15" },
     historico: [
@@ -151,7 +151,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
   },
 
   {
-    id: "DMD-2025-0005",
+    id: "DMD-2025-1216-0005",
 
     cidadeEmFoco: "recife",
     cidadeRelato: "recife",
@@ -187,7 +187,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     autorId: "flavio@gmail.com",
     autorNome: "FLAVIO",
 
-    fotos: ["/mock/DMD-2025-0005-1.jpg", "/mock/DMD-2025-0005-2.jpg"],
+    fotos: ["/mock/DMD-2025-1216-0005-1.jpg", "/mock/DMD-2025-1216-0005-2.jpg"],
     impacto: { confirmacoes: 8, ultimaConfirmacao: "2025-12-17" },
     respostaResponsavel: [
       {
@@ -211,7 +211,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
       },
       {
         data: "2025-12-19",
-        protocolo: "FC-RESP-2025-0005-R2",
+        protocolo: "FC-RESP-2025-1216-0005-R2",
         responsavel: "Secretaria de Infraestrutura Urbana",
         tipoResponsavel: "orgao_publico",
         canal: "simulado",
@@ -264,7 +264,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
   },
 
   {
-    id: "DMD-2025-0006",
+    id: "DMD-2025-1214-0006",
 
     cidadeEmFoco: "recife",
     cidadeRelato: "recife",
@@ -302,9 +302,9 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     autorNome: "JOSE",
 
     fotos: [
-      "/mock/DMD-2025-0006-1.jpg",
-      "/mock/DMD-2025-0006-2.jpg",
-      "/mock/DMD-2025-0006-3.jpg",
+      "/mock/DMD-2025-1214-0006-1.jpg",
+      "/mock/DMD-2025-1214-0006-2.jpg",
+      "/mock/DMD-2025-1214-0006-3.jpg",
     ],
     impacto: { confirmacoes: 21, ultimaConfirmacao: "2025-12-17" },
     respostaResponsavel: [
@@ -341,7 +341,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
   },
 
   {
-    id: "DMD-2025-0007",
+    id: "DMD-2025-1205-0007",
 
     cidadeEmFoco: "jaboatao",
     cidadeRelato: "jaboatao",
@@ -378,7 +378,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     autorId: "maria@gmail.com",
     autorNome: "MARIA",
 
-    fotos: ["/mock/DMD-2025-0007-1.jpg", "/mock/DMD-2025-0007-2.jpg"],
+    fotos: ["/mock/DMD-2025-1205-0007-1.jpg", "/mock/DMD-2025-1205-0007-2.jpg"],
     impacto: { confirmacoes: 15, ultimaConfirmacao: "2025-12-10" },
     respostaResponsavel: [
       {
@@ -461,7 +461,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
   },
 
   {
-    id: "DMD-2025-0008",
+    id: "DMD-2025-1218-0008",
 
     cidadeEmFoco: "olinda",
     cidadeRelato: "olinda",
@@ -497,8 +497,8 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     autorNome: "LUCAS",
 
     fotos: [
-      "/mock/DMD-2025-0008-1.jpg",
-      "/mock/DMD-2025-0008-2.jpg",
+      "/mock/DMD-2025-1218-0008-1.jpg",
+      "/mock/DMD-2025-1218-0008-2.jpg",
     ],
     impacto: { confirmacoes: 6, ultimaConfirmacao: "2025-12-18" },
     historico: [
@@ -516,7 +516,7 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     ],    
   },  
   {
-    id: "DMD-2025-0009",
+    id: "DMD-2025-1219-0009",
 
     cidadeEmFoco: "jaboatao",
     cidadeRelato: "jaboatao",
@@ -552,8 +552,8 @@ export const MOCK_DEMANDAS_EXISTENTES = [
     autorNome: "MARIA",
 
     fotos: [
-      "/mock/DMD-2025-0009-1.jpg",
-      "/mock/DMD-2025-0009-2.jpg",
+      "/mock/DMD-2025-1219-0009-1.jpg",
+      "/mock/DMD-2025-1219-0009-2.jpg",
     ],
 
     impacto: { confirmacoes: 4, ultimaConfirmacao: "2025-12-20" },
@@ -579,5 +579,356 @@ export const MOCK_DEMANDAS_EXISTENTES = [
           "Triagem inicial em andamento para identificação do responsável pelo atendimento.",
       },
     ],    
-  },  
+  },
+  {
+    id: "DMD-2025-1221-1010",
+
+    cidadeEmFoco: "recife",
+    cidadeRelato: "recife",
+    cidadeRelatoLabel: "Recife",
+    estadoRelato: "PE",
+    enderecoDetectado: {
+      rua: "Rua Jean Emile Favre",
+      bairro: "Imbiribeira",
+      cidade: "Recife",
+      estado: "PE",
+      lat: -8.1058,
+      lng: -34.9102,
+    },
+    localRelato: {
+      lat: -8.1058,
+      lng: -34.9102,
+      source: "mock",
+    },
+
+    cidade: "Recife",
+    bairro: "Imbiribeira",
+    rua: "Rua Jean Emile Favre",
+
+    categoria: "Via pública",
+    descricao:
+      "Boca de lobo entupida provoca acúmulo de água após chuvas, dificultando a passagem de pedestres e veículos.",
+    pontoReferencia: "Próximo ao cruzamento com a Avenida Mascarenhas de Morais",
+    status: "Encaminhada",
+    createdAt: "2025-12-21",
+
+    orgao: {
+      nome: "Secretaria de Infraestrutura Urbana",
+      sigla: "SEINFRA",
+      descricao:
+        "Responsável por manutenção viária, drenagem urbana e infraestrutura no Recife",
+      cidade: "Recife/PE",
+      email: "infraestrutura@recife.pe.gov.br",
+    },
+
+    userId: "ana@gmail.com",
+    autorId: "ana@gmail.com",
+    autorNome: "ANA",
+
+    fotos: [
+      "/mock/DMD-2025-1221-1010-1.jpg",
+      "/mock/DMD-2025-1221-1010-2.jpg",
+    ],
+
+    impacto: { confirmacoes: 18, ultimaConfirmacao: "2025-12-23" },
+
+    reforcos: [],
+    totalReforcos: 0,
+    ultimoReforcoEm: null,
+
+    atualizacoes: [],
+    totalAtualizacoes: 0,
+
+    ultimaMovimentacaoEm: "2025-12-23T10:20:00.000Z",
+
+    respostaResponsavel: [
+      {
+        data: "2025-12-23",
+        protocolo: "FC-RESP-2025-1221-1010",
+        responsavel: "Secretaria de Infraestrutura Urbana",
+        tipoResponsavel: "orgao_publico",
+        canal: "simulado",
+        rodada: 1,
+        texto:
+          "Informamos que a solicitação foi recebida e encaminhada para vistoria da equipe responsável pela rede de drenagem urbana.",
+        statusCidadao: "pendente_avaliacao",
+      },
+    ],
+
+    historico: [
+      {
+        data: "2025-12-21",
+        tipo: "sistema",
+        evento: "Demanda registrada no Fala Cidadão.",
+      },
+      {
+        data: "2025-12-22",
+        tipo: "sistema",
+        evento: "Demanda encaminhada ao responsável pelo atendimento.",
+      },
+      {
+        data: "2025-12-23",
+        tipo: "responsavel",
+        evento:
+          "Secretaria de Infraestrutura Urbana informou que a solicitação foi encaminhada para vistoria da rede de drenagem urbana.",
+      },
+    ],
+  },
+
+  {
+    id: "DMD-2025-1222-1011",
+
+    cidadeEmFoco: "olinda",
+    cidadeRelato: "olinda",
+    cidadeRelatoLabel: "Olinda",
+    estadoRelato: "PE",
+    enderecoDetectado: {
+      rua: "Avenida Ministro Marcos Freire",
+      bairro: "Bairro Novo",
+      cidade: "Olinda",
+      estado: "PE",
+      lat: -8.0089,
+      lng: -34.8419,
+    },
+    localRelato: {
+      lat: -8.0089,
+      lng: -34.8419,
+      source: "mock",
+    },
+
+    cidade: "Olinda",
+    bairro: "Bairro Novo",
+    rua: "Avenida Ministro Marcos Freire",
+
+    categoria: "Via pública",
+    descricao:
+      "Calçada danificada e sem faixa livre de circulação obriga pedestres, idosos e cadeirantes a seguir pela rua.",
+    pontoReferencia: "Próximo a uma parada de ônibus em Bairro Novo",
+    status: "Resposta contestada",
+    createdAt: "2025-12-22",
+
+    orgao: {
+      nome: "Secretaria de Obras de Olinda",
+      sigla: "SEOB",
+      descricao:
+        "Responsável por obras, manutenção urbana e intervenções em vias públicas no município",
+      cidade: "Olinda/PE",
+      email: "obras@olinda.pe.gov.br",
+    },
+
+    userId: "lucas@gmail.com",
+    autorId: "lucas@gmail.com",
+    autorNome: "LUCAS",
+
+    fotos: [
+      "/mock/DMD-2025-1222-1011-1.jpg",
+      "/mock/DMD-2025-1222-1011-2.jpg",
+    ],
+
+    impacto: { confirmacoes: 27, ultimaConfirmacao: "2025-12-25" },
+
+    reforcos: [],
+    totalReforcos: 0,
+    ultimoReforcoEm: null,
+
+    atualizacoes: [],
+    totalAtualizacoes: 0,
+
+    ultimaMovimentacaoEm: "2025-12-25T14:40:00.000Z",
+
+    respostaResponsavel: [
+      {
+        data: "2025-12-24",
+        protocolo: "FC-RESP-2025-1222-1011",
+        responsavel: "Secretaria de Obras de Olinda",
+        tipoResponsavel: "orgao_publico",
+        canal: "simulado",
+        rodada: 1,
+        texto:
+          "Informamos que a demanda foi recebida e será analisada quanto à competência do município e à programação das equipes de manutenção.",
+        statusCidadao: "contestada",
+        avaliadaEm: "2025-12-25T14:40:00.000Z",
+        contestacao: {
+          texto:
+            "A resposta não informa prazo de vistoria nem providência concreta para garantir a circulação segura de pedestres.",
+          data: "2025-12-25T14:40:00.000Z",
+          autorId: "lucas@gmail.com",
+          autorNome: "LUCAS",
+        },
+      },
+    ],
+
+    historico: [
+      {
+        data: "2025-12-22",
+        tipo: "sistema",
+        evento: "Demanda registrada no Fala Cidadão.",
+      },
+      {
+        data: "2025-12-23",
+        tipo: "sistema",
+        evento: "Demanda encaminhada ao responsável pelo atendimento.",
+      },
+      {
+        data: "2025-12-24",
+        tipo: "responsavel",
+        evento: "Primeira resposta do responsável registrada.",
+      },
+      {
+        data: "2025-12-25",
+        tipo: "cidadao",
+        evento:
+          "Resposta do responsável contestada pelo cidadão. Aguardando nova manifestação do responsável.",
+      },
+    ],
+  },
+  {
+    id: "DMD-2025-1223-1012",
+
+    cidadeEmFoco: "jaboatao",
+    cidadeRelato: "jaboatao",
+    cidadeRelatoLabel: "Jaboatão dos Guararapes",
+    estadoRelato: "PE",
+    enderecoDetectado: {
+      rua: "Rua Santo Elias",
+      bairro: "Prazeres",
+      cidade: "Jaboatão dos Guararapes",
+      estado: "PE",
+      lat: -8.1592,
+      lng: -34.9264,
+    },
+    localRelato: {
+      lat: -8.1592,
+      lng: -34.9264,
+      source: "mock",
+    },
+
+    cidade: "Jaboatão dos Guararapes",
+    bairro: "Prazeres",
+    rua: "Rua Santo Elias",
+
+    categoria: "Outros",
+    descricao:
+      "Esgoto a céu aberto escorre pela via há vários dias, causando mau cheiro, risco sanitário e dificuldade de circulação.",
+    pontoReferencia: "Próximo à entrada de uma vila residencial em Prazeres",
+    status: "Resolvida",
+    createdAt: "2025-12-23",
+
+    orgao: {
+      nome: "Compesa",
+      sigla: "COMPESA",
+      descricao:
+        "Companhia responsável por serviços de abastecimento de água e esgotamento sanitário em Pernambuco",
+      cidade: "Jaboatão dos Guararapes/PE",
+      email: "atendimento@compesa.com.br",
+    },
+
+    userId: "paula@gmail.com",
+    autorId: "paula@gmail.com",
+    autorNome: "PAULA",
+
+    fotos: [
+      "/mock/DMD-2025-1223-1012-1.jpg",
+      "/mock/DMD-2025-1223-1012-2.jpg",
+    ],
+
+    impacto: { confirmacoes: 31, ultimaConfirmacao: "2025-12-27" },
+
+    reforcos: [],
+    totalReforcos: 0,
+    ultimoReforcoEm: null,
+
+    atualizacoes: [
+      {
+        id: "ATU-2025-1224-1012",
+        data: "2025-12-24",
+        autorId: "paula@gmail.com",
+        autorNome: "PAULA",
+        texto:
+          "Moradores informam que o vazamento continua ativo e o mau cheiro aumentou após a chuva.",
+        fotos: ["/mock/DMD-2025-1223-1012-3.jpg"],
+      },
+    ],
+    totalAtualizacoes: 1,
+
+    ultimaMovimentacaoEm: "2025-12-27T16:10:00.000Z",
+
+    respostaResponsavel: [
+      {
+        data: "2025-12-24",
+        protocolo: "FC-RESP-2025-1223-1012",
+        responsavel: "Compesa",
+        tipoResponsavel: "concessionaria",
+        canal: "simulado",
+        rodada: 1,
+        texto:
+          "Informamos que a ocorrência foi registrada e encaminhada para avaliação técnica da equipe operacional.",
+        statusCidadao: "contestada",
+        avaliadaEm: "2025-12-25T09:15:00.000Z",
+        contestacao: {
+          texto:
+            "A resposta confirma o recebimento, mas não informa previsão de atendimento para o vazamento de esgoto.",
+          data: "2025-12-25T09:15:00.000Z",
+          autorId: "paula@gmail.com",
+          autorNome: "PAULA",
+        },
+      },
+      {
+        data: "2025-12-26",
+        protocolo: "FC-RESP-2025-1223-1012-R2",
+        responsavel: "Compesa",
+        tipoResponsavel: "concessionaria",
+        canal: "simulado",
+        rodada: 2,
+        texto:
+          "Após vistoria, informamos que a equipe realizou intervenção emergencial no ponto indicado e normalizou o escoamento.",
+        statusCidadao: "aceita",
+        avaliadaEm: "2025-12-27T16:10:00.000Z",
+        contestacao: null,
+      },
+    ],
+
+    historico: [
+      {
+        data: "2025-12-23",
+        tipo: "sistema",
+        evento: "Demanda registrada no Fala Cidadão.",
+      },
+      {
+        data: "2025-12-24",
+        tipo: "sistema",
+        evento: "Demanda encaminhada ao responsável pelo atendimento.",
+      },
+      {
+        data: "2025-12-24",
+        tipo: "responsavel",
+        evento: "Primeira resposta do responsável registrada.",
+      },
+      {
+        data: "2025-12-24",
+        tipo: "cidadao",
+        evento: "Atualização cidadã registrada.",
+      },
+      {
+        data: "2025-12-25",
+        tipo: "cidadao",
+        evento: "Resposta do responsável contestada pelo cidadão.",
+      },
+      {
+        data: "2025-12-26",
+        tipo: "responsavel",
+        evento: "Segunda resposta do responsável registrada.",
+      },
+      {
+        data: "2025-12-27",
+        tipo: "cidadao",
+        evento: "Resposta do responsável aceita pelo cidadão.",
+      },
+      {
+        data: "2025-12-27",
+        tipo: "sistema",
+        evento: "Demanda marcada como resolvida no Fala Cidadão.",
+      },
+    ],
+  },    
 ];

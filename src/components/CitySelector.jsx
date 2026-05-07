@@ -2,11 +2,11 @@
 
 import { useContext } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ThemeContext } from "../context/ThemeContext";
+import { CityContext } from "../context/CityContext";
 
 // Componente para seleção de cidade
 export default function CitySelector({ onChangeComplete }) {
-  const { city, changeCity } = useContext(ThemeContext);
+  const { city, changeCity } = useContext(CityContext);
   const location = useLocation();
   const navigate = useNavigate();
 

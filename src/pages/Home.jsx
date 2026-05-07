@@ -3,7 +3,7 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getDemandas } from "../storage/demandasStorage";
-import { ThemeContext } from "../context/ThemeContext";
+import { CityContext } from "../context/CityContext";
 import { CITY_THEMES } from "../theme/cities";
 
 import PrimaryButton from "../components/PrimaryButton";
@@ -44,7 +44,7 @@ function statusBadgeClass(status) {
 
 export default function Home() {
   const navigate = useNavigate();
-  const { city } = useContext(ThemeContext);
+  const { city } = useContext(CityContext);
   const authUser = useMemo(() => {
     try {
       const raw = localStorage.getItem("falaCidadao.auth");

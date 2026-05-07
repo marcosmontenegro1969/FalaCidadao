@@ -1,7 +1,7 @@
 // src/components/Footer.jsx
 
 import { useContext } from "react";
-import { ThemeContext } from "../context/ThemeContext";
+import { CityContext } from "../context/CityContext";
 import { CITY_THEMES } from "../theme/cities";
 
 /* Footer (Rodapé da aplicação)
@@ -14,7 +14,7 @@ import { CITY_THEMES } from "../theme/cities";
  * Observação importante:
  * - O Footer é o único local onde as cores da cidade aparecem */
 export default function Footer() {
-  const { city } = useContext(ThemeContext);
+  const { city } = useContext(CityContext);
 
   const theme = CITY_THEMES[city] ?? CITY_THEMES.default;
   const [c1, c2, c3] = theme.footerGradient;
