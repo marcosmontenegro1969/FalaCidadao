@@ -28,8 +28,6 @@ function statusBadgeClass(status, appearance = "dark") {
         return "bg-amber-100 text-amber-800 border border-amber-400";
       case "Encaminhada":
         return "bg-sky-100 text-sky-800 border border-sky-400";
-      case "Resposta contestada":
-        return "bg-orange-100 text-orange-800 border border-orange-400";
       case "Resolvida":
         return "bg-emerald-100 text-emerald-800 border border-emerald-400";
       case "Encerrada":
@@ -44,12 +42,107 @@ function statusBadgeClass(status, appearance = "dark") {
       return "bg-amber-500/10 text-amber-300 border border-amber-500/40";
     case "Encaminhada":
       return "bg-sky-500/10 text-sky-300 border border-sky-500/40";
-    case "Resposta contestada":
-      return "bg-orange-500/10 text-orange-300 border border-orange-500/40";
     case "Resolvida":
       return "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40";
     case "Encerrada":
       return "bg-violet-500/10 text-violet-300 border border-violet-500/40";
+    default:
+      return "bg-slate-500/10 text-slate-200 border border-slate-500/30";
+  }
+}
+
+function normalizarStatusOperacional(status) {
+  switch (status) {
+    case "Em análise":
+    case "Encaminhada":
+    case "Resolvida":
+    case "Encerrada":
+      return status;
+
+    // Compatibilidade com registros antigos/mockados
+    case "Resposta contestada":
+      return "Encaminhada";
+
+    default:
+      return status || "Em análise";
+  }
+}
+
+function obterAcompanhamentoDemanda({ statusOperacional, respostasResponsavel }) {
+  const respostas = Array.isArray(respostasResponsavel)
+    ? respostasResponsavel
+    : [];
+
+  const total = respostas.length;
+  const primeiraResposta = respostas[0] || null;
+  const segundaResposta = respostas[1] || null;
+
+  if (statusOperacional === "Encerrada") {
+    return "Ciclo encerrado";
+  }
+
+  if (statusOperacional === "Resolvida") {
+    return "Solução aceita";
+  }
+
+  if (total === 0) {
+    return "Aguardando resposta";
+  }
+
+  if (segundaResposta) {
+    if (segundaResposta.statusCidadao === "aceita") {
+      return "Solução aceita";
+    }
+
+    if (segundaResposta.statusCidadao === "contestada") {
+      return "Ciclo encerrado";
+    }
+
+    return "Nova resposta recebida";
+  }
+
+  if (primeiraResposta?.statusCidadao === "aceita") {
+    return "Solução aceita";
+  }
+
+  if (primeiraResposta?.statusCidadao === "contestada") {
+    return "Aguardando resposta";
+  }
+
+  return "Resposta recebida";
+}
+
+function acompanhamentoBadgeClass(acompanhamento, appearance = "dark") {
+  const isLight = appearance === "light";
+
+  if (isLight) {
+    switch (acompanhamento) {
+      case "Aguardando resposta":
+        return "bg-slate-100 text-slate-700 border border-slate-300";
+      case "Resposta recebida":
+        return "bg-indigo-100 text-indigo-800 border border-indigo-300";
+      case "Nova resposta recebida":
+        return "bg-orange-100 text-orange-800 border border-orange-300";
+      case "Solução aceita":
+        return "bg-emerald-100 text-emerald-800 border border-emerald-300";
+      case "Ciclo encerrado":
+        return "bg-violet-100 text-violet-800 border border-violet-300";
+      default:
+        return "bg-slate-100 text-slate-700 border border-slate-300";
+    }
+  }
+
+  switch (acompanhamento) {
+    case "Aguardando resposta":
+      return "bg-slate-500/10 text-slate-200 border border-slate-500/30";
+    case "Resposta recebida":
+      return "bg-indigo-500/10 text-indigo-200 border border-indigo-500/40";
+    case "Nova resposta recebida":
+      return "bg-orange-500/10 text-orange-200 border border-orange-500/40";
+    case "Solução aceita":
+      return "bg-emerald-500/10 text-emerald-200 border border-emerald-500/40";
+    case "Ciclo encerrado":
+      return "bg-violet-500/10 text-violet-200 border border-violet-500/40";
     default:
       return "bg-slate-500/10 text-slate-200 border border-slate-500/30";
   }
@@ -420,13 +513,27 @@ export default function DetalheDemanda() {
     isAutenticado &&
     reforcos.some((item) => item?.autorId === currentUserId);
 
-  const statusDemanda = demanda?.status || "";
+  const statusOperacional = normalizarStatusOperacional(demanda?.status);
+
+  const statusDemanda = statusOperacional;
+
+  const respostasResponsavel = Array.isArray(demanda?.respostaResponsavel)
+    ? demanda.respostaResponsavel
+    : Array.isArray(demanda?.respostaOrgao)
+    ? demanda.respostaOrgao
+    : [];
+
+  const acompanhamentoDemanda = obterAcompanhamentoDemanda({
+    statusOperacional,
+    respostasResponsavel,
+  });
 
   const demandaBloqueadaParaMovimentacao =
     statusDemanda === "Resolvida" || statusDemanda === "Encerrada";
 
-  const demandaComRespostaContestada =
-    statusDemanda === "Resposta contestada";
+  const demandaComRespostaContestada = respostasResponsavel.some(
+    (resposta) => resposta?.statusCidadao === "contestada"
+  );
 
   const mensagemBloqueioMovimentacao =
     statusDemanda === "Resolvida"
@@ -626,12 +733,6 @@ useEffect(() => {
     return evento;
   }  
 
-  const respostasResponsavel = Array.isArray(demanda.respostaResponsavel)
-    ? demanda.respostaResponsavel
-    : Array.isArray(demanda.respostaOrgao)
-    ? demanda.respostaOrgao
-    : [];
-
   const totalRespostasResponsavel = respostasResponsavel.length;
 
   const primeiraRespostaContestada =
@@ -751,7 +852,7 @@ useEffect(() => {
     setAlertOverlay({
       title: "Envio de novas evidências",
       message:
-        "Nesta etapa do MVP, apenas o autor pode anexar evidências, e o envio ainda não é publicado automaticamente. Em breve, novas fotos poderão ser enviadas com validação antes da publicação.",
+        "Novas evidências passam por validação antes de serem exibidas publicamente na demanda.",
     });
   }
 
@@ -759,7 +860,7 @@ useEffect(() => {
     setAlertOverlay({
       title: "Nova evidência para atualização",
       message:
-        "Na próxima etapa, você poderá adicionar uma nova evidência para atualizar este problema.",
+        "Novas evidências podem ser adicionadas em atualizações cidadãs quando houver informação complementar sobre o problema.",
       actionLabel: "Fechar",
     });
   }  
@@ -940,7 +1041,7 @@ useEffect(() => {
           "Responsável pelo atendimento",
         tipoResponsavel:
           primeiraResposta.tipoResponsavel || "orgao_publico",
-        canal: "simulado",
+        canal: "registro_interno",
         rodada: 2,
         texto:
           "Após nova análise da contestação registrada pelo cidadão, informamos que a demanda será reavaliada pela equipe responsável para definição das providências cabíveis.",
@@ -967,9 +1068,9 @@ useEffect(() => {
     persistirDemandas(nextDemandas);
 
     setAlertOverlay({
-      title: "Segunda resposta registrada",
+      title: "Nova resposta registrada",
       message:
-        "A nova resposta simulada do responsável foi adicionada ao histórico da demanda.",
+        "A nova manifestação do responsável foi adicionada ao histórico da demanda.",
       actionLabel: "Fechar",
     });
   }
@@ -1060,11 +1161,20 @@ useEffect(() => {
 
               <span
                 className={`px-2 py-1 rounded-full ${statusBadgeClass(
-                  demanda.status,
+                  statusOperacional,
                   appearance
                 )}`}
               >
-                {demanda.status}
+                {statusOperacional}
+              </span>
+
+              <span
+                className={`px-2 py-1 rounded-full ${acompanhamentoBadgeClass(
+                  acompanhamentoDemanda,
+                  appearance
+                )}`}
+              >
+                {acompanhamentoDemanda}
               </span>
             </div>
 
@@ -1140,7 +1250,7 @@ useEffect(() => {
               <span className="text-xs text-textmuted">
                 {fotosPublicas.length
                   ? `${fotosPublicas.length} foto(s)`
-                  : "Sem fotos no MVP"}
+                  : "Sem fotos publicadas"}
               </span>
             </div>
           </div>
@@ -1154,7 +1264,7 @@ useEffect(() => {
           ) : (
             <div className="space-y-2">
               <p className="text-sm text-textmuted">
-                Esta demanda não possui fotos publicadas no mock.
+                Esta demanda não possui evidências fotográficas publicadas.
               </p>
 
               {anexosPendentes.length ? (
@@ -1180,8 +1290,7 @@ useEffect(() => {
                   </ul>
 
                   <p className="text-[11px] text-textmuted mt-2">
-                    (MVP) Como estamos sem backend, estes anexos ficam
-                    registrados como “local:” no LocalStorage.
+                    Esses anexos aguardam validação antes de serem exibidos publicamente.
                   </p>
                 </div>
               ) : null}
@@ -1496,7 +1605,7 @@ useEffect(() => {
                 {podeSimularSegundaResposta ? (
                   <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 space-y-2">
                     <p className="text-xs text-amber-200 leading-relaxed">
-                      A primeira resposta foi contestada pelo cidadão. No MVP, é possível simular uma segunda manifestação do responsável.
+                      A primeira resposta foi contestada pelo cidadão. Uma nova manifestação do responsável pode ser registrada para complementar o acompanhamento da demanda.
                     </p>
 
                     <button
@@ -1504,7 +1613,7 @@ useEffect(() => {
                       onClick={handleSimularSegundaRespostaResponsavel}
                       className="px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-200 text-xs hover:bg-amber-500/20 transition"
                     >
-                      Simular nova resposta do responsável
+                      Registrar nova resposta do responsável
                     </button>
                   </div>
                 ) : null}
@@ -1538,7 +1647,7 @@ useEffect(() => {
                   </p>
 
                   <p className="text-[11px] text-textmuted">
-                    Este MVP ainda não realiza o encaminhamento automático, mas a estrutura já está pronta para registrar e dar transparência às respostas.
+                    As manifestações recebidas serão registradas nesta seção para manter transparência, rastreabilidade e histórico público da demanda.
                   </p>
                 </div>
               </>
